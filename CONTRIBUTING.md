@@ -114,7 +114,25 @@ Our team is committed to creating an inclusive, collaborative, and productive en
 ---
 
 ## Git Workflow
+Default branch: 'master'
 
-We follow the **Feature Branch Workflow** with protected main branch.
+- Work on your own branch named **<yourname>**. Do not commit directly to 'master'
+- Commit messages: **one line**, meaningful and concise (changes and reason for changes)
+- Open a pull request to 'master'. At least one peer review is required before merging.
 
-### Branch Structure
+**Steps**
+```bash
+
+# update local master
+git checkout master
+git pull origin master
+
+# create your branch
+git check -b <yourname>
+
+# stage and commit (one-line message)
+git add .
+git commit -m "meaningful one-line message"
+
+# push your branch and open a PR to master
+git push origin <yourname>
