@@ -10,6 +10,10 @@ Campus fitness centers face a consistent problem: unpredictable crowding creates
 
 NYU students dedicate a lot fo time to academics or the city lifestyle. With a school as large as NYU, their athletic facilities/gyms comes with a lot of management problems for students. Crowds, equipment avaliability and optimizing your allocated time, and hours.  SmartFit transforms the campus fitness experience by providing real-time insights, smart coordination tools, and a centralized platform for a better athletic experience on campus.
 
+## Product Vision Statement
+
+SmartFit empowers students to make the most of their campus fitness experience by providing real-time gym insights, smart coordination tools, and social accountability in one unified platform.
+
 ---
 
 ## Team Members
