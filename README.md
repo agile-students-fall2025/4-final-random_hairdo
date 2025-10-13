@@ -16,11 +16,11 @@ NYU students dedicate a lot fo time to academics or the city lifestyle. With a s
 
 | Name | GitHub | Role |
 |------|--------|------|
-| [Member Name 1] | [@github-username-1](https://github.com/username1) | |
-| [Member Name 2] | [@github-username-2](https://github.com/username2) |  |
-| [Member Name 3] | [@github-username-3](https://github.com/username3) |  |
-| [Member Name 4] | [@github-username-4](https://github.com/username4) |  |
-| [Member Name 5] | [@github-username-5](https://github.com/username5) |  |
+| [Matthew Membreno] | [m9membreno](https://github.com/m9membreno) | |
+| [Andrew Park] | [Toudles](https://github.com/Toudles) |  |
+| [Sarya Sadi] | [saryasadi](https://github.com/saryasadi) |  |
+| [Yi Fei] | [@github-username-4](https://github.com/username4) |  |
+| [Ahmed Arkam] | [@github-username-5](https://github.com/username5) |  |
 
 ---
 
