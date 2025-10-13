@@ -82,5 +82,8 @@ We welcome contributions from the NYU community and beyond. Whether you're fixin
 
 > **Note**: This section will be updated as the project progresses through development phases.
 
-### Prerequisites
-### ...
+## Additional Resources
+
+### NYU Athletics & Recreation
+- [NYU Athletics Facilities Hours & Access](https://gonyuathletics.com/sports/2021/2/25/nyu-athletics-facilities-hours-access.aspx) - Official hours and access policies
+- [NYU Athletic Facilities Overview](https://gonyuathletics.com/sports/2024/1/29/landing-page-facilities-draft.aspx) - Detailed information on each facility
