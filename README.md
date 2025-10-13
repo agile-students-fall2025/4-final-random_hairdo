@@ -23,7 +23,7 @@ SmartFit empowers students to make the most of their campus fitness experience b
 | [Matthew Membreno] | [m9membreno](https://github.com/m9membreno) | |
 | [Andrew Park] | [Toudles](https://github.com/Toudles) |  |
 | [Sarya Sadi] | [saryasadi](https://github.com/saryasadi) |  |
-| [Yi Fei] | [@github-username-4](https://github.com/username4) |  |
+| [Yi Fei] | [yeefeizhao](https://github.com/yeefeizhao) |  |
 | [Ahmed Arkam] | [@github-username-5](https://github.com/username5) |  |
 
 ---
