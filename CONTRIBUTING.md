@@ -116,5 +116,3 @@ Our team is committed to creating an inclusive, collaborative, and productive en
 ## Git Workflow
 
 We follow the **Feature Branch Workflow** with protected main branch.
-
-### Branch Structure
