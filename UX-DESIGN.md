@@ -23,35 +23,35 @@ Users begin by either registering a new account or logging in to an existing one
 ## Wireframes
 
 ### Log In
-![Log In](ux-design/login.png)
+![Log In](ux-design/Login.png)
 Allows users to access their account using email/username and password. Includes a link to the **Register** screen for new users.  
 Upon successful login, users are directed to the **Dashboard/Home Page**.
 
 ---
 
 ### Register
-![Register](ux-design/register.png)
+![Register](ux-design/Register.png)
 Enables users to create a new account by entering essential information such as username, password, and fitness preferences.  
 Includes a link to return to the **Log In** screen.
 
 ---
 
 ### Dashboard / Home Page
-![Dashboard](ux-design/dashboard.png)
+![Dashboard](ux-design/Dashboard.png)
 Serves as the main hub of the app. Displays an overview of today’s workout summary, quick links to **History**, **Queues**, and **Partners**, and motivational statistics like streaks or active minutes.  
 Users can also navigate to **Profile** and **Settings** from here.
 
 ---
 
 ### History Page
-![History Page](ux-design/history.png)
+![History Page](ux-design/History.png)
 Displays a chronological list of previous workouts with key stats (exercise type, duration, sets/reps, and calories).  
 Users can tap on any session to view a detailed summary.
 
 ---
 
 ### Partners Page
-![Partners Page](ux-design/partners.png)
+![Partners Page](ux-design/Partners.png)
 Connects users with other gym-goers looking for partners.  
 Includes options to:
 - **Find a Partner:** Search based on gym location or workout goals.  
@@ -60,7 +60,8 @@ Includes options to:
 ---
 
 ### Queues Page
-![Queues Page](ux-design/queues.png)
+![Queues Page](ux-design/Queues.png)
+![QueueConfirmed Page](ux-design/QueuesConfirmed.png)
 Allows users to **join a queue** for gym equipment or facilities when the gym is busy.  
 Displays current queue length, estimated wait time, and a “Join/Leave Queue” button.  
 After joining, users can monitor their queue position in real time.
@@ -68,7 +69,7 @@ After joining, users can monitor their queue position in real time.
 ---
 
 ### Profile Page
-![Profile Page](ux-design/profile.png)
+![Profile Page](ux-design/Profile.png)
 Shows user information such as name, photo, fitness goals, and current statistics.  
 Users can navigate to **Edit Profile** or return to the **Dashboard**.  
 Provides a quick snapshot of fitness milestones and gym achievements.
@@ -76,7 +77,7 @@ Provides a quick snapshot of fitness milestones and gym achievements.
 ---
 
 ### Settings Page
-![Settings Page](ux-design/settings.png)
+![Settings Page](ux-design/Settings.png)
 Allows users to customize app preferences, notification settings, and account details.  
 Includes actions such as “Edit Info,” “Change Password,” and “Log Out.”
 
