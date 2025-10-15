@@ -11,7 +11,6 @@ The App Map below shows the primary navigation flow of **Smart Fit**.
 Users begin by either registering a new account or logging in to an existing one, both of which lead to the Dashboard/Home Page. From there, users can explore several core features:
 
 * **History** – Review previous workouts, including sets, reps, duration, and calories burned.
-* **Partners** – Find a workout partner, view matched users, and connect.
 * **Queues** – Join or monitor a queue for specific gym equipment.
 * **Profile** – View personal fitness data and edit key metrics.
 * **Settings** – Update preferences, account details, and app configurations.
