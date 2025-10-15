@@ -91,4 +91,4 @@ Includes actions such as “Edit Info,” “Change Password,” and “Log Out.
 ---
 
 ## Prototype
-[Figma Prototype](https://www.figma.com/design/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=0-1&t=fUfldpbwr77553CX-1/)
+[Figma Prototype](https://www.figma.com/proto/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=24-2&p=f&t=UmApS7adLS7flWv6-1&scaling=scale-down&content-scaling=fixed&page-id=1%3A2&starting-point-node-id=1%3A53)
