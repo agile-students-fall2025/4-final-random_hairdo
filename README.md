@@ -10,17 +10,21 @@ Campus fitness centers face a consistent problem: unpredictable crowding creates
 
 NYU students dedicate a lot fo time to academics or the city lifestyle. With a school as large as NYU, their athletic facilities/gyms comes with a lot of management problems for students. Crowds, equipment avaliability and optimizing your allocated time, and hours.  SmartFit transforms the campus fitness experience by providing real-time insights, smart coordination tools, and a centralized platform for a better athletic experience on campus.
 
+## Product Vision Statement
+
+SmartFit empowers students to make the most of their campus fitness experience by providing real-time gym insights, smart coordination tools, and social accountability in one unified platform.
+
 ---
 
 ## Team Members
 
 | Name | GitHub | Role |
 |------|--------|------|
-| [Member Name 1] | [@github-username-1](https://github.com/username1) | |
-| [Member Name 2] | [@github-username-2](https://github.com/username2) |  |
-| [Member Name 3] | [@github-username-3](https://github.com/username3) |  |
-| [Member Name 4] | [@github-username-4](https://github.com/username4) |  |
-| [Member Name 5] | [@github-username-5](https://github.com/username5) |  |
+| [Matthew Membreno] | [m9membreno](https://github.com/m9membreno) | |
+| [Andrew Park] | [Toudles](https://github.com/Toudles) |  |
+| [Sarya Sadi] | [saryasadi](https://github.com/saryasadi) |  |
+| [Yi Fei] | [yeefeizhao](https://github.com/yeefeizhao) |  |
+| [Ahmed Arkam] | [am13367](https://github.com/am13367) |  |
 
 ---
 
