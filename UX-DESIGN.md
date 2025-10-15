@@ -39,7 +39,7 @@ Includes a link to return to the **Log In** screen.
 ---
 
 ### Dashboard / Home Page
-![Dashboard](ux-design/Dashboard.png)  
+![Dashboard](ux-design/DashBoard.png)  
 
 Serves as the main hub of the app. Displays an overview of today’s workout summary, quick links to **History**, **Queues**, and **Partners**, and motivational statistics like streaks or active minutes.  
 Users can also navigate to **Profile** and **Settings** from here.
