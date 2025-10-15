@@ -6,6 +6,7 @@ These wireframes and the app map illustrate the Minimum Viable Product (MVP) flo
 ---
 
 ## App Map
+[App Map Source](https://www.figma.com/design/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=0-1&p=f&t=o69TJ5Yq3QLxWdIT-0)
 
 The App Map below shows the primary navigation flow of **Smart Fit**.  
 Users begin by either registering a new account or logging in to an existing one, both of which lead to the Dashboard/Home Page. From there, users can explore several core features:
@@ -18,9 +19,11 @@ Users begin by either registering a new account or logging in to an existing one
 
 ![App Map](ux-design/app-map.png)
 
+
 ---
 
 ## Wireframes
+[Wireframe Source](https://www.figma.com/design/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=1-2&p=f&t=fHRFMwlpmVcyj1Ax-0)
 
 ### Log In
 ![Log In](ux-design/Login.png)  
@@ -54,16 +57,6 @@ Users can tap on any session to view a detailed summary.
 
 ---
 
-### Partners Page
-![Partners Page](ux-design/Partners.png)  
-
-Connects users with other gym-goers looking for partners.  
-Includes options to:
-- **Find a Partner:** Search based on gym location or workout goals.  
-- **Partner Match:** View automatically generated matches and request to connect.
-
----
-
 ### Queues Page
 ![Queues Page](ux-design/Queues.png)
 ![QueueConfirmed Page](ux-design/QueuesConfirmed.png)  
@@ -92,4 +85,4 @@ Includes actions such as “Edit Info,” “Change Password,” and “Log Out.
 ---
 
 ## Prototype
-[Figma Prototype](https://www.figma.com/design/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=0-1&t=fUfldpbwr77553CX-1/)
+[Figma Prototype](https://www.figma.com/proto/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=1-53&p=f&t=fHRFMwlpmVcyj1Ax-0&scaling=scale-down&content-scaling=fixed&page-id=1%3A2&starting-point-node-id=1%3A53)
