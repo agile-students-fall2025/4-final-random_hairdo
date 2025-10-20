@@ -35,7 +35,7 @@ From the Home Page, users can access the following sections:
 [Wireframe Source](https://www.figma.com/design/eUh8SgREd1709DvDteNzJg/SmartFit?node-id=1-2&p=f&t=fHRFMwlpmVcyj1Ax-0)
 
 ### Register
-![Register](ux-design/register.png)  
+![Register](ux-design/Register.png)  
 
 Allows new users to create an account by providing basic information such as email and password.
 Includes a link to navigate back to the **Log In** screen.
@@ -43,7 +43,7 @@ Includes a link to navigate back to the **Log In** screen.
 ---
 
 ### Log In
-![Log In](ux-design/login.png)  
+![Log In](ux-design/Login.png)  
 
 Enables users to access their account with their email and password.  
 Provides an option to navigate to the **Register** screen for new users.  
@@ -52,7 +52,7 @@ Upon successful login, users are directed to the **Home Page**.
 ---
 
 ### Home Page / Dashboard
-![Dashboard](ux-design/dashboard.png)  
+![Dashboard](ux-design/DashBoard.png)  
 
 Acts as the main hub of the app.  
 Displays a quick overview of the user’s current activity, progress highlights, and shortcuts to **Profile**, **Settings**, and **Queues**.  
@@ -61,7 +61,7 @@ Users can navigate seamlessly to track progress, manage preferences, or join equ
 ---
 
 ### Profile Page
-![Profile Page](ux-design/profile.png)  
+![Profile Page](ux-design/Profile.png)  
 
 Centralizes all user-specific information. Displays the user’s name and email address. 
 From here, users can navigate to:
@@ -72,7 +72,7 @@ From here, users can navigate to:
 ---
 
 ### History Page
-![History Page](ux-design/history.png)  
+![History Page](ux-design/History.png)  
 
 Presents a detailed timeline of the user’s past workouts.  
 Includes key metrics such as exercise type, duration, muscle groups targeted, and gym location.  
@@ -106,7 +106,7 @@ Displays the user’s current position in the queue and updates dynamically as t
 ---
 
 ### Settings Page
-![Settings Page](ux-design/settings.png)  
+![Settings Page](ux-design/Settings.png)  
 
 Provides access to app customization and account management options.  
 From here, users can access:
