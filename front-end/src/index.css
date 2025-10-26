@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+* {
+    font-family: "Noto Sans", sans-serif;
+    scroll-behavior: smooth;
+}
