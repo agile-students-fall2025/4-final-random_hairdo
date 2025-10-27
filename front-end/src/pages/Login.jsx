@@ -1,12 +1,18 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 function Login() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
   const navigate = useNavigate()
+
   const handleLogIn = () => {
     // Placeholder for login logic
     alert('Log in functionality to be implemented.')
     navigate('/')
   }
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
       <div className="w-full max-w-md p-8 space-y-6">
@@ -19,6 +25,8 @@ function Login() {
         <form className="mt-4 space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div>
             <input
+              onChange={(e) => setEmail(e.target.value)}
+              value={email}
               type="email"
               required
               className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -28,6 +36,8 @@ function Login() {
 
           <div>
             <input
+              onChange={(e) => setPassword(e.target.value)}
+              value={password}
               type="password"
               required
               className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
