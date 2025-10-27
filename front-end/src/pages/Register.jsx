@@ -61,7 +61,7 @@ function Register() {
               }}
               type="email"
               required
-              className={'mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500' + (emailError ? 'border-red-500' : '')}
+              className={'mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-[#462c9f]' + (emailError ? 'border-red-500' : '')}
               placeholder="Email (must be @nyu.edu)"
             />
             { (emailError || !isNyuEmail(email)) && (
@@ -84,7 +84,7 @@ function Register() {
               }}
               type="password"
               required
-              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-[#462c9f]"
               placeholder="Password"
             />
           </div>
@@ -98,7 +98,7 @@ function Register() {
               }}
               type="password"
               required
-              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
               placeholder="Confirm Password"
             />
             {passwordError && (
