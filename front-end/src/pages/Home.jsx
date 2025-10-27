@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 function Home() {
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#efefed] px-6 py-4">
+    <div className="min-h-screen flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
@@ -19,7 +19,7 @@ function Home() {
         </div>
       </div>
       <div>
-        <h1 className="text-3xl text-left text-gray-800">
+        <h1 className="text-3xl text-left">
           Hello, {"guest"}!
         </h1>
       </div>
@@ -37,7 +37,7 @@ function Home() {
         <Link
           to="/settings"
           aria-label="Settings"
-          className="mt-6 w-40 py-2 text-center bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-100 transition"
+          className="mt-6 w-40 py-2 text-center bg-white border border-gray-200 rounded-md hover:bg-gray-100 transition"
         >
           Settings
         </Link>
