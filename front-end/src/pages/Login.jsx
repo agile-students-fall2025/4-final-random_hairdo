@@ -1,6 +1,12 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 function Login() {
+  const navigate = useNavigate()
+  const handleLogIn = () => {
+    // Placeholder for login logic
+    alert('Log in functionality to be implemented.')
+    navigate('/')
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
       <div className="w-full max-w-md p-8 space-y-6">
@@ -32,8 +38,9 @@ function Login() {
           <button
             type="submit"
             className="w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium hover:bg-[#3b237f] hover:cursor-pointer transition-colors"
+            onClick={handleLogIn}
           >
-            Sign in
+            Log in
           </button>
         </form>
 
