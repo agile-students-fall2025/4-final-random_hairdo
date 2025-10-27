@@ -11,8 +11,9 @@ function Register() {
 
   const navigate = useNavigate()
 
+  // verify nyu email format
   const isNyuEmail = (value) =>
-    value.trim().toLowerCase().endsWith('@nyu.edu')
+    /^[A-Za-z]{2,3}\d{4,5}@nyu\.edu$/i.test(value.trim())
 
   useEffect(() => {
     setIsFormValid(
@@ -28,7 +29,7 @@ function Register() {
     setPasswordError('')
 
     if (!isNyuEmail(email)) {
-      setEmailError('You must register with an @nyu.edu email.')
+      setEmailError('You must register with a valid @nyu.edu email (e.g. ab1234@nyu.edu).')
       return
     }
 
@@ -41,6 +42,15 @@ function Register() {
     alert('Register functionality to be implemented.')
     navigate('/')
   }
+
+  const getEmailHelperText = () => {
+    if (emailError) return emailError
+    if (!email) return 'Must be an @nyu.edu email to register.'
+    if (isNyuEmail(email)) return null
+    return 'e.g. abc123@nyu.edu'
+  }
+
+  const emailHelper = getEmailHelperText()
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
@@ -61,16 +71,16 @@ function Register() {
               }}
               type="email"
               required
-              className={'mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-[#462c9f]' + (emailError ? 'border-red-500' : '')}
+              className={
+                'mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]'
+              }
               placeholder="Email (must be @nyu.edu)"
             />
-            { (emailError || !isNyuEmail(email)) && (
+            {emailHelper && (
               <p
-                className={`mt-1 text-sm ${
-                  emailError ? 'text-red-600' : 'text-gray-500'
-                }`}
+                className='mt-1 text-sm'
               >
-                {emailError ? emailError : 'Must be an @nyu.edu email to register.'}
+                {emailHelper}
               </p>
             )}
           </div>
@@ -84,7 +94,7 @@ function Register() {
               }}
               type="password"
               required
-              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-[#462c9f]"
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
               placeholder="Password"
             />
           </div>
