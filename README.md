@@ -16,15 +16,15 @@ SmartFit empowers students to make the most of their campus fitness experience b
 
 ---
 
-## Team Members (Sprint 0)
+## Team Members (Sprint 1)
 
 | Name | GitHub | Role |
 |------|--------|------|
-| [Matthew Membreno] | [m9membreno](https://github.com/m9membreno) | Product Owner |
-| [Andrew Park] | [Toudles](https://github.com/Toudles) | Scrum Master |
+| [Matthew Membreno] | [m9membreno](https://github.com/m9membreno) |  |
+| [Andrew Park] | [Toudles](https://github.com/Toudles) |  |
 | [Sarya Sadi] | [saryasadi](https://github.com/saryasadi) |  |
-| [Yi Fei] | [yeefeizhao](https://github.com/yeefeizhao) |  |
-| [Ahmed Arkam] | [am13367](https://github.com/am13367) |  |
+| [Yi Fei] | [yeefeizhao](https://github.com/yeefeizhao) | Product Owner |
+| [Ahmed Arkam] | [am13367](https://github.com/am13367) | Scrum Master |
 
 ---
 
