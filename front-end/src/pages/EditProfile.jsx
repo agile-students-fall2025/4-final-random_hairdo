@@ -26,7 +26,7 @@ function EditProfile() {
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault()
-    // TODO: Add API call to update profile in Sprint 2
+    // TODO: Add API call to update profile during Sprint 2
     console.log('Profile updated:', formData)
     // Navigate back to profile page after saving
     navigate('/profile')
