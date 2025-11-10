@@ -98,7 +98,7 @@ All endpoints return JSON responses in the format:
 - `GET /api/facilities/:id` - Get specific facility details
   - Returns: Facility name, address, capacity
 
-### Zones (Equipment Zones)
+### Zones
 - `GET /api/zones` - Get all equipment zones
   - Query params: `?facilityId=<id>` to filter by facility
   - Returns: Zone name, queue length, wait time, capacity
@@ -142,8 +142,6 @@ All endpoints return JSON responses in the format:
 - `GET /api/support/faqs` - Get FAQ content
 - `POST /api/support/issues` - Submit support issue
 
-
-
 ## Testing
 
 ### Run all tests
@@ -163,15 +161,24 @@ Tests are located in the `test/` directory and use Mocha and Chai.
 ```
 back-end/
 ├── routes/
-│   ├── 
-│   ├── 
-│   ├── 
-│   └── 
+│   ├── facilities.js
+│   ├── goals.js
+│   ├── history.js
+│   ├── notifications.js
+│   ├── queues.js
+│   ├── settings.js
+│   ├── users.js
+│   └── zones.js
 ├── test/
-│   ├── 
-│   ├── 
-│   ├── 
-│   └── 
+│   ├── facilities.test.js
+│   ├── goals.test.js
+│   ├── history.test.js
+│   ├── integration.test.js
+│   ├── notifications.test.js
+│   ├── queues.test.js
+│   ├── settings.test.js
+│   ├── users.test.js
+│   └── zones.test.js
 ├── server.js            # Main server file
 ├── package.json
 ├── .env                 # Environment variables
