@@ -31,42 +31,55 @@ export const users = [
 export const facilities = [
   {
     id: 1,
-    name: 'Downtown Fitness Center',
-    address: '123 Main Street, New York, NY 10001',
-    capacity: 200,
+    name: 'Paulson Athletic Facility',
+    address: '181 Mercer Street, New York, NY 10012',
+    capacity: 180,
     hours: {
-      weekdays: '5:00 AM - 11:00 PM',
-      weekends: '7:00 AM - 9:00 PM'
+      weekdays: '7:00 AM - 11:00 PM',
+      weekends: '9:00 AM - 10:00 PM'
     },
-    amenities: ['Lockers', 'Showers', 'Parking', 'WiFi'],
-    phone: '(555) 123-4567',
+    amenities: ['Lockers', 'Showers', 'Basketball Courts', 'Squash Courts', 'WiFi'],
+    phone: '(212) 998-2021',
     createdAt: '2023-01-01T00:00:00Z'
   },
   {
     id: 2,
-    name: 'Uptown Wellness Gym',
-    address: '456 Park Avenue, New York, NY 10022',
-    capacity: 150,
+    name: 'Palladium Athletic Facility',
+    address: '140 E 14th St, New York, NY 10003',
+    capacity: 250,
     hours: {
-      weekdays: '6:00 AM - 10:00 PM',
-      weekends: '8:00 AM - 8:00 PM'
+      weekdays: '6:00 AM - 12:00 AM',
+      weekends: '8:00 AM - 11:00 PM'
     },
-    amenities: ['Lockers', 'Showers', 'Sauna', 'Pool'],
-    phone: '(555) 234-5678',
+    amenities: ['Lockers', 'Showers', 'Pool', 'Rock Climbing Wall', 'Basketball Courts', 'WiFi'],
+    phone: '(212) 998-2020',
     createdAt: '2023-02-01T00:00:00Z'
   },
   {
     id: 3,
-    name: 'Brooklyn Athletic Club',
-    address: '789 Bedford Ave, Brooklyn, NY 11211',
-    capacity: 180,
+    name: 'NYU 404 Fitness',
+    address: '404 Lafayette St, New York, NY 10003',
+    capacity: 150,
     hours: {
-      weekdays: '5:30 AM - 11:30 PM',
-      weekends: '7:00 AM - 10:00 PM'
+      weekdays: '6:30 AM - 11:00 PM',
+      weekends: '9:00 AM - 9:00 PM'
     },
-    amenities: ['Lockers', 'Showers', 'Parking', 'Cafe'],
-    phone: '(555) 345-6789',
+    amenities: ['Lockers', 'Showers', 'Cardio Equipment', 'Free Weights', 'Group Fitness Studio'],
+    phone: '(212) 998-2022',
     createdAt: '2023-03-01T00:00:00Z'
+  },
+  {
+    id: 4,
+    name: 'Brooklyn Athletic Facility',
+    address: '6 Metrotech Center, Brooklyn, NY 11201',
+    capacity: 200,
+    hours: {
+      weekdays: '7:00 AM - 11:00 PM',
+      weekends: '9:00 AM - 10:00 PM'
+    },
+    amenities: ['Lockers', 'Showers', 'Basketball Courts', 'Fitness Center', 'Study Spaces', 'WiFi'],
+    phone: '(718) 260-3000',
+    createdAt: '2023-04-01T00:00:00Z'
   }
 ]
 
