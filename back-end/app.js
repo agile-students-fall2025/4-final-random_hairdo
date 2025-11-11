@@ -3,6 +3,14 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
+import facilityRoutes from './routes/facilities.js'
+import zoneRoutes from './routes/zones.js'
+import queueRoutes from './routes/queues.js'
+import userRoutes from './routes/users.js'
+import goalRoutes from './routes/goals.js'
+import historyRoutes from './routes/history.js'
+import notificationRoutes from './routes/notifications.js'
+import settingsRoutes from './routes/settings.js'
 
 // Load environment variables
 dotenv.config({ silent: true })
@@ -38,14 +46,6 @@ app.get('/', (req, res) => {
 })
 
 
-import facilityRoutes from './routes/facilities.js'
-import zoneRoutes from './routes/zones.js'
-import queueRoutes from './routes/queues.js'
-import userRoutes from './routes/users.js'
-import goalRoutes from './routes/goals.js'
-import historyRoutes from './routes/history.js'
-import notificationRoutes from './routes/notifications.js'
-import settingsRoutes from './routes/settings.js'
 
 app.use('/api/facilities', facilityRoutes)
 app.use('/api/zones', zoneRoutes)
