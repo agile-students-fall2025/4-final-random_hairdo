@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 // Shared button styles
@@ -10,15 +10,33 @@ function Zone() {
   const location = useLocation()
   const facilityId = location.state?.facilityId || 1
 
-  const [zones] = useState([
-    { id: 1, name: 'Cardio Studio', queueLength: 3, waitTime: '15 min' },
-    { id: 2, name: 'Squat Rack Zone', queueLength: 5, waitTime: '25 min' },
-    { id: 3, name: 'Free Weights Zone', queueLength: 2, waitTime: '10 min' },
-    { id: 4, name: 'Functional Training Zone', queueLength: 1, waitTime: '5 min' },
-    { id: 5, name: 'Machine Zone', queueLength: 0, waitTime: 'No wait' }
-  ])
-
+  const [zones, setZones] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedZone, setSelectedZone] = useState(null)
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/zones?facilityId=${facilityId}`)
+        const data = await response.json()
+        
+        if (data.success) {
+          setZones(data.data)
+        } else {
+          setError(data.error || 'Failed to load zones')
+        }
+      } catch (err) {
+        console.error('Error fetching zones:', err)
+        setError('Failed to connect to server')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchZones()
+  }, [facilityId])
 
   const handleJoinQueue = (zone) => {
     setSelectedZone(zone)
@@ -33,6 +51,27 @@ function Zone() {
           position: selectedZone.queueLength + 1
         } 
       })
+    }
+  }
+
+  const formatWaitTime = (minutes) => {
+    if (minutes === 0) return 'No wait'
+    if (minutes < 60) return `${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'available':
+        return 'text-green-600'
+      case 'moderate':
+        return 'text-yellow-600'
+      case 'busy':
+        return 'text-red-600'
+      default:
+        return 'text-gray-600'
     }
   }
 
@@ -60,30 +99,61 @@ function Zone() {
       </div>
 
       <div className="flex-1 flex flex-col gap-4 max-w-md">
-        {zones.map((zone) => (
-          <div
-            key={zone.id}
-            className={`p-5 rounded-lg border-2 ${
-              selectedZone?.id === zone.id
-                ? 'border-[#462c9f] bg-purple-50'
-                : 'border-gray-300 bg-white'
-            }`}
-          >
-            <div className="mb-3">
-              <h3 className="text-xl font-bold mb-2">{zone.name}</h3>
-              <div className="space-y-1 text-sm text-gray-700">
-                <p>Queue Length: <span className="font-semibold">{zone.queueLength} people</span></p>
-                <p>Estimated Wait: <span className="font-semibold">{zone.waitTime}</span></p>
-              </div>
-            </div>
-            <button
-              onClick={() => handleJoinQueue(zone)}
-              className={selectedZone?.id === zone.id ? btnPrimary : btnOutline}
+        {loading ? (
+          <div className="text-center py-8">
+            <p className="text-lg text-gray-600">Loading zones...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-lg text-red-600">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-[#462c9f] text-white rounded-lg hover:bg-[#3b237f]"
             >
-              {selectedZone?.id === zone.id ? 'Selected' : 'Join Queue'}
+              Retry
             </button>
           </div>
-        ))}
+        ) : zones.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-lg text-gray-600">No zones available for this facility</p>
+          </div>
+        ) : (
+          zones.map((zone) => (
+            <div
+              key={zone.id}
+              className={`p-5 rounded-lg border-2 ${
+                selectedZone?.id === zone.id
+                  ? 'border-[#462c9f] bg-purple-50'
+                  : 'border-gray-300 bg-white'
+              }`}
+            >
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xl font-bold">{zone.name}</h3>
+                  <span className={`text-sm font-semibold uppercase ${getStatusColor(zone.status)}`}>
+                    {zone.status}
+                  </span>
+                </div>
+                <div className="space-y-1 text-sm text-gray-700">
+                  <p>Queue Length: <span className="font-semibold">{zone.queueLength} people</span></p>
+                  <p>Estimated Wait: <span className="font-semibold">{formatWaitTime(zone.averageWaitTime)}</span></p>
+                  <p>Capacity: <span className="font-semibold">{zone.currentOccupancy}/{zone.capacity}</span></p>
+                  {zone.equipment && zone.equipment.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-2">
+                      Equipment: {zone.equipment.join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleJoinQueue(zone)}
+                className={selectedZone?.id === zone.id ? btnPrimary : btnOutline}
+              >
+                {selectedZone?.id === zone.id ? 'Selected' : 'Join Queue'}
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       {selectedZone && (
