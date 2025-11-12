@@ -1,18 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Notifications() {
-  // Initialize with sample notifications (some unread, some read)
-  const [items, setItems] = useState([
-    { id: 1, title: "Goal deadline reminder: Leg day scheduled for 6 PM", read: false },
-    { id: 2, title: "New message from your friend", read: false },
-    { id: 3, title: "Weekly progress report is ready to view", read: false },
-    { id: 4, title: "Goal completed: 5-day streak!", read: true },
-    { id: 5, title: "New equipments are free", read: true },
-    { id: 6, title: "New class added: Power Yoga", read: true },
-    { id: 7, title: "New equipments are free", read: true },
-    { id: 8, title: "SmartFit app update now available", read: true },
-  ]);
+  const USER_ID = 1; // swap when you have auth
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   const btnDark =
     "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
@@ -21,28 +14,71 @@ export default function Notifications() {
   const btnSecondary =
     "px-4 py-2 bg-gray-200 text-[#282f32] rounded-md text-sm font-medium hover:bg-gray-300 transition";
 
-  const recent = items.filter((n) => !n.read);
-  const earlier = items.filter((n) => n.read);
+  // helper
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      method: opts.method || "GET",
+      headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      throw new Error(data.error || data.message || res.statusText);
+    }
+    return data;
+  }
 
-  // Mark all unread notifications as read
-  const markAllAsRead = () => {
-    if (recent.length === 0) return;
-    const updated = items.map((n) => ({ ...n, read: true }));
-    setItems(updated);
-    console.log("All notifications marked as read");
-  };
+  // initial load
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const { data } = await api(`/api/notifications/user/${USER_ID}`);
+        // backend uses isRead; normalize to isRead in state
+        setItems(data);
+      } catch (e) {
+        setErr(e.message || "Failed to load notifications");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  // Clear all notifications
-  const clearAll = () => {
+  const unread = useMemo(() => items.filter(n => !n.isRead), [items]);
+  const read = useMemo(() => items.filter(n => n.isRead), [items]);
+
+  // Mark single as read (click on an unread item)
+  async function markOne(id) {
+    try {
+      await api(`/api/notifications/${id}/read`, { method: "PUT" });
+      setItems(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
+    } catch (e) {
+      alert(`Could not mark as read: ${e.message}`);
+    }
+  }
+
+  // Mark all unread as read
+  async function markAllAsRead() {
+    if (!unread.length) return;
+    try {
+      await Promise.all(
+        unread.map(n => api(`/api/notifications/${n.id}/read`, { method: "PUT" }))
+      );
+      setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (e) {
+      alert(`Could not mark all: ${e.message}`);
+    }
+  }
+
+  // Clear all (UI only for now)
+  function clearAll() {
     if (window.confirm("Are you sure you want to clear all notifications?")) {
       setItems([]);
-      console.log("All notifications cleared");
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4">
-      
       {/* Header */}
       <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between">
         <Link to="/settings" className={btnDark}>
@@ -83,28 +119,45 @@ export default function Notifications() {
 
           {/* Notification list */}
           <div className="max-h-80 overflow-y-auto">
-            {items.length === 0 ? (
+            {loading ? (
+              <div className="p-6 text-center text-sm text-gray-500">
+                Loading…
+              </div>
+            ) : err ? (
+              <div className="p-6 text-center text-sm text-red-600">
+                {err}
+              </div>
+            ) : items.length === 0 ? (
               <div className="p-6 text-center text-sm text-gray-500">
                 No notifications at the moment. Check back later!
               </div>
             ) : (
               <>
-                {recent.length > 0 && (
+                {unread.length > 0 && (
                   <div className="px-2 py-2">
                     <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-[#282f32]/60">
                       Unread
                     </div>
                     <ul className="mt-1">
-                      {recent.map((n) => (
+                      {unread.map((n) => (
                         <li
                           key={n.id}
-                          className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50"
+                          className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50 cursor-pointer"
+                          onClick={() => markOne(n.id)}
+                          title="Mark as read"
                         >
                           <span
                             aria-hidden
                             className="mt-2 h-2 w-2 rounded-full bg-[#462c9f] shrink-0"
                           />
-                          <p className="font-semibold">{n.title}</p>
+                          <div>
+                            <p className="font-semibold">{n.title}</p>
+                            {n.message && (
+                              <p className="text-sm text-gray-600">
+                                {n.message}
+                              </p>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -116,7 +169,7 @@ export default function Notifications() {
                     Read
                   </div>
                   <ul className="mt-1">
-                    {earlier.map((n) => (
+                    {read.map((n) => (
                       <li
                         key={n.id}
                         className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50"
@@ -125,7 +178,16 @@ export default function Notifications() {
                           aria-hidden
                           className="mt-2 h-2 w-2 rounded-full bg-gray-300 shrink-0"
                         />
-                        <p className="font-normal text-[#282f32]">{n.title}</p>
+                        <div>
+                          <p className="font-normal text-[#282f32]">
+                            {n.title}
+                          </p>
+                          {n.message && (
+                            <p className="text-sm text-gray-600">
+                              {n.message}
+                            </p>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>

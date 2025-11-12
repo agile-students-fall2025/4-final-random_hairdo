@@ -1,11 +1,50 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const onSignOut = () => navigate("/login");
-  const onDelete = () =>
-    window.confirm("Delete your account? This cannot be undone.") &&
-    navigate("/register");
+
+  // TODO: replace with real logged-in user id
+  const USER_ID = 1;
+
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
+
+  const onSignOut = () => {
+    // clear any client-side session state
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.clear();
+    navigate("/login");
+  };
+
+  const onDelete = async () => {
+    if (!window.confirm("Delete your account? This cannot be undone.")) return;
+
+    try {
+      setDeleting(true);
+      setDeleteErr("");
+
+      const res = await fetch(`/api/settings/account/${USER_ID}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.success === false) {
+        throw new Error(body.error || body.message || "Delete failed");
+      }
+
+      // Clear local state and send user to register (or landing)
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate("/register");
+    } catch (err) {
+      setDeleteErr(err.message || "Something went wrong deleting your account");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // shared bases (unchanged)
   const btnPrimary =
@@ -13,7 +52,6 @@ export default function Settings() {
   const btnOutline =
     "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#462c9f] text-base font-semibold text-center hover:bg-[#462c9f] hover:text-white transition";
 
-  // button-only variants (just add cursor)
   const btnPrimaryBtn = `${btnPrimary} cursor-pointer`;
   const btnOutlineBtn = `${btnOutline} cursor-pointer`;
 
@@ -43,9 +81,20 @@ export default function Settings() {
 
         <div className="h-20" />
 
+        {deleteErr && (
+          <div className="mb-4 text-sm text-red-600 border border-red-200 bg-red-50 rounded-md px-3 py-2">
+            {deleteErr}
+          </div>
+        )}
+
         <div className="md:flex md:justify-center">
-          <button type="button" onClick={onDelete} className={`md:w-[520px] ${btnOutlineBtn}`}>
-            Delete Account
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className={`md:w-[520px] ${btnOutlineBtn} ${deleting ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            {deleting ? "Deleting…" : "Delete Account"}
           </button>
         </div>
       </main>
