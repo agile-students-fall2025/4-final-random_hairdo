@@ -15,7 +15,7 @@ import goalRoutes from './routes/goals.js'
 import historyRoutes from './routes/history.js'
 import notificationRoutes from './routes/notifications.js'
 import settingsRoutes from './routes/settings.js'
-import helpSupportRoutes from './routes/helpsupp.js'  
+import authRoutes from "./routes/auth.js";
 
 // Load environment variables
 dotenv.config({ silent: true })
@@ -71,7 +71,8 @@ app.use('/api/goals', goalRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/settings', settingsRoutes)
-app.use('/api/support', helpSupportRoutes)  
+app.use("/api/auth", authRoutes);
+
 
 // 404 handler 
 app.use((req, res) => {
