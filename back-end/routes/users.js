@@ -3,7 +3,7 @@
 // Sprint 2: Mock authentication (no JWT/bcrypt yet - Sprint 3)
 
 import express from 'express'
-import { users, findById, getNextId } from '../utils/mockData.js'
+import { users, getNextId, findById } from '../utils/mockData.js'
 
 const router = express.Router()
 
