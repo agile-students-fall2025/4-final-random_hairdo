@@ -162,42 +162,6 @@ export const queues = [
   {
     id: 1,
     userId: 1,
-    zoneId: 1,
-    facilityId: 1,
-    position: 1,
-    estimatedWait: 10, // minutes
-    status: 'active',
-    joinedAt: '2024-11-11T09:00:00Z',
-    updatedAt: '2024-11-11T09:00:00Z',
-    completedAt: null
-  },
-  {
-    id: 2,
-    userId: 2,
-    zoneId: 1,
-    facilityId: 1,
-    position: 2,
-    estimatedWait: 20,
-    status: 'active',
-    joinedAt: '2024-11-11T09:05:00Z',
-    updatedAt: '2024-11-11T09:05:00Z',
-    completedAt: null
-  },
-  {
-    id: 3,
-    userId: 3,
-    zoneId: 2,
-    facilityId: 1,
-    position: 1,
-    estimatedWait: 15,
-    status: 'active',
-    joinedAt: '2024-11-11T08:45:00Z',
-    updatedAt: '2024-11-11T08:45:00Z',
-    completedAt: null
-  },
-  {
-    id: 4,
-    userId: 1,
     zoneId: 2,
     facilityId: 1,
     position: 0,
@@ -208,7 +172,7 @@ export const queues = [
     completedAt: '2024-11-10T15:30:00Z'
   },
   {
-    id: 5,
+    id: 2,
     userId: 2,
     zoneId: 4,
     facilityId: 2,
@@ -217,7 +181,19 @@ export const queues = [
     status: 'cancelled',
     joinedAt: '2024-11-10T10:00:00Z',
     updatedAt: '2024-11-10T10:15:00Z',
-    completedAt: null
+    completedAt: '2024-11-10T10:15:00Z'
+  },
+  {
+    id: 3,
+    userId: 3,
+    zoneId: 1,
+    facilityId: 1,
+    position: 0,
+    estimatedWait: 0,
+    status: 'completed',
+    joinedAt: '2024-11-09T08:45:00Z',
+    updatedAt: '2024-11-09T09:15:00Z',
+    completedAt: '2024-11-09T09:15:00Z'
   }
 ]
 
