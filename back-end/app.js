@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
+
+// Route modules
 import facilityRoutes from './routes/facilities.js'
 import zoneRoutes from './routes/zones.js'
 import queueRoutes from './routes/queues.js'
@@ -11,6 +13,7 @@ import goalRoutes from './routes/goals.js'
 import historyRoutes from './routes/history.js'
 import notificationRoutes from './routes/notifications.js'
 import settingsRoutes from './routes/settings.js'
+import helpSupportRoutes from './routes/helpsupp.js'  
 
 // Load environment variables
 dotenv.config({ silent: true })
@@ -27,6 +30,7 @@ app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Root info endpoint
 app.get('/', (req, res) => {
   res.json({ 
     message: 'SmartFit API Server',
@@ -40,13 +44,13 @@ app.get('/', (req, res) => {
       goals: '/api/goals',
       history: '/api/history',
       notifications: '/api/notifications',
-      settings: '/api/settings'
+      settings: '/api/settings',
+      support: '/api/support'     
     }
   })
 })
 
-
-
+// API routes
 app.use('/api/facilities', facilityRoutes)
 app.use('/api/zones', zoneRoutes)
 app.use('/api/queues', queueRoutes)
@@ -55,7 +59,7 @@ app.use('/api/goals', goalRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/settings', settingsRoutes)
-
+app.use('/api/support', helpSupportRoutes)  
 
 // 404 handler 
 app.use((req, res) => {
