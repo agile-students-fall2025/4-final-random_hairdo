@@ -7,7 +7,7 @@ import {
   findByUserId,
   findById,
   getNextId
-} from '../mock-data/mockData.js'
+} from '../utils/mockData.js'
 
 const router = express.Router()
 
