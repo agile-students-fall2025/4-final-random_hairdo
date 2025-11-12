@@ -84,7 +84,63 @@ We welcome contributions from the NYU community and beyond. Whether you're fixin
 
 ## Building and Testing
 
-> **Note**: This section will be updated as the project progresses through development phases.
+### Prerequisites
+- Node.js (v18 or higher)
+- npm (v9 or higher)
+
+### Running the Application
+
+#### 1. Start the Backend Server
+
+```bash
+cd back-end
+npm install
+npm start
+```
+
+The backend API will be available at `http://localhost:3000`
+
+#### 2. Start the Frontend Development Server
+
+In a new terminal:
+
+```bash
+cd front-end
+npm install
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173`
+
+### Running Tests
+
+#### Backend Tests
+
+```bash
+cd back-end
+npm test
+```
+
+To check code coverage:
+
+```bash
+cd back-end
+npm run coverage
+```
+
+### API Endpoints
+
+The backend provides the following API endpoints:
+
+- `GET /api/facilities` - Get all gym facilities
+- `GET /api/facilities/:id` - Get specific facility details
+- `GET /api/zones` - Get all equipment zones (with optional `?facilityId` filter)
+- `GET /api/zones/:id` - Get specific zone details
+- `POST /api/queues` - Join a queue for equipment
+- `GET /api/queues/:id` - Get queue entry details
+- `GET /api/queues/user/:userId` - Get all queues for a user
+- `PUT /api/queues/:id` - Update queue position or status
+- `DELETE /api/queues/:id` - Leave a queue
 
 ## Additional Resources
 
