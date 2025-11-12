@@ -6,28 +6,81 @@ const btnOutline = "w-1/2 px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#
 
 function ConfirmedQueue() {
   const location = useLocation()
-  const { zone, position: initialPosition } = location.state || { 
-    zone: { name: 'Unknown Zone', waitTime: 'N/A' }, 
-    position: 0 
+  const { zone, position: initialPosition, queueId, facilityId, estimatedWait: initialWait } = location.state || { 
+    zone: { name: 'Unknown Zone', averageWaitTime: 0 }, 
+    position: 0,
+    queueId: null,
+    facilityId: null,
+    estimatedWait: 0
   }
 
   const [currentPosition, setCurrentPosition] = useState(initialPosition)
-  const [estimatedWait, setEstimatedWait] = useState(zone.waitTime)
+  const [estimatedWait, setEstimatedWait] = useState(initialWait || zone.averageWaitTime || 0)
+  const [error, setError] = useState(null)
 
+  // Fetch queue updates from backend
   useEffect(() => {
-    if (currentPosition > 1) {
-      const interval = setInterval(() => {
-        setCurrentPosition(prev => {
-          const newPosition = Math.max(1, prev - 1)
-          const waitMinutes = (newPosition - 1) * 5
-          setEstimatedWait(waitMinutes > 0 ? `${waitMinutes} min` : 'Next in line!')
-          return newPosition
-        })
-      }, 10000) 
+    if (!queueId) return
 
-      return () => clearInterval(interval)
+    const fetchQueueStatus = async () => {
+      try {
+        const response = await fetch(`/api/queues/${queueId}`)
+        const data = await response.json()
+
+        if (data.success) {
+          setCurrentPosition(data.data.position)
+          setEstimatedWait(data.data.estimatedWait)
+        } else {
+          setError('Failed to fetch queue status')
+        }
+      } catch (err) {
+        console.error('Error fetching queue status:', err)
+        setError('Failed to fetch queue status')
+      }
     }
-  }, [currentPosition])
+
+    // Fetch immediately
+    fetchQueueStatus()
+
+    // Poll for updates every 10 seconds
+    const interval = setInterval(fetchQueueStatus, 10000)
+
+    return () => clearInterval(interval)
+  }, [queueId])
+
+  // Format wait time for display
+  const formatWaitTime = (minutes) => {
+    if (minutes === 0) return 'Next in line!'
+    if (minutes < 60) return `${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+
+  // Handle leave queue
+  const handleLeaveQueue = async () => {
+    if (!queueId) return
+
+    if (!confirm('Are you sure you want to leave the queue?')) return
+
+    try {
+      const response = await fetch(`/api/queues/${queueId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('Successfully left the queue')
+        window.location.href = '/facility'
+      } else {
+        alert(data.error || 'Failed to leave queue')
+      }
+    } catch (err) {
+      console.error('Error leaving queue:', err)
+      alert('Failed to leave queue. Please try again.')
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#efefed] px-6 py-4">
@@ -52,6 +105,11 @@ function ConfirmedQueue() {
           <h1 className="text-3xl font-bold text-green-800 mb-2">✓ Queue Confirmed!</h1>
           <p className="text-lg text-green-700">You've successfully joined the queue</p>
         </div>
+        {error && (
+          <div className="bg-red-100 border-2 border-red-500 rounded-lg p-4 mb-4">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 max-w-md">
@@ -76,22 +134,22 @@ function ConfirmedQueue() {
 
             <div>
               <p className="text-sm text-gray-600 mb-1">Estimated Wait Time</p>
-              <p className="text-2xl font-bold">{estimatedWait}</p>
+              <p className="text-2xl font-bold">{formatWaitTime(estimatedWait)}</p>
               <p className="text-xs text-gray-500 mt-1">Updates automatically as the queue moves</p>
             </div>
           </div>
         </div>
 
         <div className="flex justify-between gap-4">
-          <Link to="/zone" className={btnPrimary}>
-            View Other Zones
-          </Link>
-          
-          <Link 
-            to="/facility" 
+          <button 
+            onClick={handleLeaveQueue}
             className={btnOutline}
           >
-            Change Facility
+            Leave Queue
+          </button>
+          
+          <Link to="/zone" className={btnPrimary}>
+            View Other Zones
           </Link>
         </div>
 

@@ -42,15 +42,44 @@ function Zone() {
     setSelectedZone(zone)
   }
 
-  const handleConfirmQueue = () => {
-    if (selectedZone) {
-      navigate('/confirmed-queue', { 
-        state: { 
-          zone: selectedZone, 
-          facilityId,
-          position: selectedZone.queueLength + 1
-        } 
+  const handleConfirmQueue = async () => {
+    if (!selectedZone) return
+
+    try {
+      // Create queue entry in backend
+      const response = await fetch('/api/queues', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 1, // TODO: Get from auth context
+          zoneId: selectedZone.id,
+          facilityId: facilityId,
+          position: selectedZone.queueLength + 1,
+          estimatedWait: selectedZone.averageWaitTime
+        })
       })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Navigate to confirmation page with queue data
+        navigate('/confirmed-queue', { 
+          state: { 
+            zone: selectedZone,
+            facilityId: facilityId,
+            queueId: data.data.id,
+            position: data.data.position,
+            estimatedWait: data.data.estimatedWait
+          } 
+        })
+      } else {
+        alert(data.error || 'Failed to join queue')
+      }
+    } catch (error) {
+      console.error('Error joining queue:', error)
+      alert('Failed to join queue. Please try again.')
     }
   }
 
