@@ -4,38 +4,63 @@ import { Link, useNavigate } from "react-router-dom";
 function ChangePassword() {
   const navigate = useNavigate();
 
-  // State for form inputs
+  // TODO: replace with real logged-in user id from your auth state
+  const USER_ID = 1;
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState(null); // ✅ new state for success/error message
-  const [isSuccess, setIsSuccess] = useState(false); // ✅ distinguish success/error
+  const [message, setMessage] = useState(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Handler for form submission
-  const handleConfirmChanges = (event) => {
+  const handleConfirmChanges = async (event) => {
     event.preventDefault();
 
-    if (newPassword.trim() === "" || confirmPassword.trim() === "") {
+    // client-side checks
+    if (!newPassword.trim() || !confirmPassword.trim()) {
       setMessage("Please fill out both fields.");
       setIsSuccess(false);
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setMessage("New passwords do not match!");
       setIsSuccess(false);
       return;
     }
+    if (newPassword.length < 6) {
+      setMessage("Password must be at least 6 characters long.");
+      setIsSuccess(false);
+      return;
+    }
 
-    // ✅ Simulate success
-    console.log("Attempting to change password to:", newPassword);
+    try {
+      setSubmitting(true);
+      setMessage(null);
 
-    setMessage("✅ Your password has been successfully changed.");
-    setIsSuccess(true);
-    setNewPassword("");
-    setConfirmPassword("");
+      const res = await fetch(`/api/users/${USER_ID}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
+      });
 
-    // Auto-navigate after short delay
-    setTimeout(() => navigate("/settings"), 2000);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.success === false) {
+        throw new Error(body.error || body.message || "Password change failed");
+      }
+
+      setMessage("✅ Your password has been successfully changed.");
+      setIsSuccess(true);
+      setNewPassword("");
+      setConfirmPassword("");
+
+      // navigate after a short delay
+      setTimeout(() => navigate("/settings"), 1500);
+    } catch (err) {
+      setMessage(err.message || "Something went wrong. Please try again.");
+      setIsSuccess(false);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const btnPrimary =
@@ -43,8 +68,6 @@ function ChangePassword() {
 
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4 flex flex-col">
-      
-      {/* Header */}
       <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between mb-6">
         <Link
           to="/settings"
@@ -53,21 +76,13 @@ function ChangePassword() {
           Back to Settings
         </Link>
         <Link to="/" aria-label="Home">
-          <img
-            src="/smartfit_logo.png"
-            alt="SMARTFIT logo"
-            className="h-12 w-auto md:h-16"
-          />
+          <img src="/smartfit_logo.png" alt="SMARTFIT logo" className="h-12 w-auto md:h-16" />
         </Link>
       </header>
 
-      {/* Main Content */}
       <main className="mx-auto w-full max-w-md md:max-w-xl flex-grow flex flex-col justify-center">
-        <h1 className="text-4xl font-semibold mb-8 text-center">
-          Change Password
-        </h1>
+        <h1 className="text-4xl font-semibold mb-8 text-center">Change Password</h1>
 
-        {/* ✅ Feedback Message */}
         {message && (
           <div
             className={`mb-6 text-center px-4 py-3 rounded-lg text-base font-medium ${
@@ -80,14 +95,9 @@ function ChangePassword() {
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleConfirmChanges} className="flex flex-col gap-6">
-          {/* New Password Field */}
           <div>
-            <label
-              htmlFor="newPassword"
-              className="block text-lg font-medium mb-2"
-            >
+            <label htmlFor="newPassword" className="block text-lg font-medium mb-2">
               New Password
             </label>
             <input
@@ -100,12 +110,8 @@ function ChangePassword() {
             />
           </div>
 
-          {/* Confirm Password Field */}
           <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-lg font-medium mb-2"
-            >
+            <label htmlFor="confirmPassword" className="block text-lg font-medium mb-2">
               Confirm Password
             </label>
             <input
@@ -118,9 +124,8 @@ function ChangePassword() {
             />
           </div>
 
-          {/* Submit Button */}
-          <button type="submit" className={`${btnPrimary} mt-4`}>
-            Confirm Changes
+          <button type="submit" disabled={submitting} className={`${btnPrimary} mt-4 ${submitting ? "opacity-60 cursor-not-allowed" : ""}`}>
+            {submitting ? "Saving…" : "Confirm Changes"}
           </button>
         </form>
       </main>

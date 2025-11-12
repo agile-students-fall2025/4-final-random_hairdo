@@ -1,36 +1,78 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Support() {
+  const USER_ID = 1; // TODO: replace with real auth user id
   const [open, setOpen] = useState(null);
   const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false); // ✅ new state for confirmation
-
-  // FAQ content updated slightly for realism
-  const faqs = [
-    { q: "How can I reset my password?", a: "Go to your account settings and select 'Change Password'. Follow the prompts to create a new one." },
-    { q: "Why am I not receiving notifications?", a: "Please check your app notification settings and ensure permissions are enabled." },
-    { q: "Can I update my email address?", a: "Yes, you can update your registered email in the Profile section under Account Information." },
-    { q: "How do I delete my account?", a: "We're sorry to see you go! Please reach out to support for help with account removal." },
-  ];
+  const [submitted, setSubmitted] = useState(false);
+  const [faqs, setFaqs] = useState([]);
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
+  const [faqError, setFaqError] = useState("");
 
   const toggle = (idx) => setOpen((prev) => (prev === idx ? null : idx));
 
-  const onSubmit = (e) => {
-    e.preventDefault();
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      method: opts.method || "GET",
+      headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      throw new Error(data.error || data.message || res.statusText);
+    }
+    return data;
+  }
 
+  // Load FAQs from backend
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingFaqs(true);
+        const { data } = await api("/api/support/faqs");
+        // Expecting array like [{ id, category, question, answer, order }, ...]
+        // Your current front-end renders q/a keys; normalize here:
+        const normalized = data.map((f) => ({
+          q: f.question ?? f.q,
+          a: f.answer ?? f.a,
+          id: f.id,
+          category: f.category,
+          order: f.order,
+        }));
+        setFaqs(normalized);
+      } catch (e) {
+        setFaqError(e.message || "Failed to load FAQs");
+      } finally {
+        setLoadingFaqs(false);
+      }
+    })();
+  }, []);
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
     if (!message.trim()) {
       alert("Please enter a message before submitting.");
       return;
     }
 
-    console.log("Support request submitted:", message);
-
-    setSubmitted(true);
-    setMessage("");
-
-    // Auto-hide message after a few seconds
-    setTimeout(() => setSubmitted(false), 3000);
+    try {
+      await api("/api/support/issues", {
+        method: "POST",
+        body: {
+          userId: USER_ID,
+          message,                 // backend expects { userId, message, ... }
+          subject: "Support request from app",
+          category: "General",
+          priority: "medium",
+        },
+      });
+      setSubmitted(true);
+      setMessage("");
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (err) {
+      alert(`Could not submit: ${err.message}`);
+    }
   };
 
   // Shared styles
@@ -43,7 +85,6 @@ export default function Support() {
 
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4">
-      
       {/* Header */}
       <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between">
         <Link to="/settings" className={btnDark}>
@@ -67,37 +108,43 @@ export default function Support() {
             Frequently Asked Questions
           </h2>
 
-          <ul className="space-y-3">
-            {faqs.map((item, idx) => {
-              const expanded = open === idx;
-              return (
-                <li key={idx} className={card}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(idx)}
-                    aria-expanded={expanded}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer"
-                  >
-                    <span className="font-semibold">{item.q}</span>
-                    <span
-                      className={`transition-transform text-lg ${
-                        expanded ? "rotate-180" : ""
-                      }`}
-                      aria-hidden
+          {loadingFaqs ? (
+            <div className="p-4 text-sm text-gray-600">Loading FAQs…</div>
+          ) : faqError ? (
+            <div className="p-4 text-sm text-red-600">{faqError}</div>
+          ) : (
+            <ul className="space-y-3">
+              {faqs.map((item, idx) => {
+                const expanded = open === idx;
+                return (
+                  <li key={item.id ?? idx} className={card}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(idx)}
+                      aria-expanded={expanded}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer"
                     >
-                      {expanded ? "−" : "+"}
-                    </span>
-                  </button>
+                      <span className="font-semibold">{item.q}</span>
+                      <span
+                        className={`transition-transform text-lg ${
+                          expanded ? "rotate-180" : ""
+                        }`}
+                        aria-hidden
+                      >
+                        {expanded ? "−" : "+"}
+                      </span>
+                    </button>
 
-                  {expanded && (
-                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">
-                      {item.a}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    {expanded && (
+                      <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">
+                        {item.a}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
         {/* Support Form */}
@@ -124,7 +171,6 @@ export default function Support() {
             </div>
           </form>
 
-          {/* ✅ Feedback message */}
           {submitted && (
             <div className="mt-4 px-4 py-3 bg-green-100 text-green-700 border border-green-300 rounded-lg text-center text-sm font-medium">
               ✅ Thank you! Your message has been sent. Our team will get back to you soon.
