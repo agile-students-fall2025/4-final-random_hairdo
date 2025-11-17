@@ -1,136 +1,136 @@
-// ----------------------
-// SMARTFIT: Goals Page
-// ----------------------
-// This page allows users to create, track, complete, and remove fitness goals.
-// React hooks manage state, and Tailwind CSS provides responsive styling.
-// The layout is simple, minimal, and encourages daily motivation.
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 function Goals() {
-  // ----------------------------
-  // State variables
-  // ----------------------------
-  const [goals, setGoals] = useState([
-    'Go to the gym everyday this week',
-    'Try out new equipment',
-    'Beat current PR'
-  ]);
+  const userId = 1; // TEMP until login PR merges
 
-  const [completedGoals, setCompletedGoals] = useState([
-    'Go to the gym today',
-    'Meet dietary requirements'
-  ]);
+  const [goals, setGoals] = useState([]);
+  const [completedGoals, setCompletedGoals] = useState([]);
+  const [newGoal, setNewGoal] = useState("");
 
-  const [newGoal, setNewGoal] = useState('');
+  // ------------------------
+  // Load goals on page load
+  // ------------------------
+  useEffect(() => {
+    fetch(`http://localhost:3000/api/goals/user/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) return;
 
-  // ----------------------------
-  // Functions
-  // ----------------------------
+        // Backend doesn't track "completed", so we simulate it:
+        const active = data.data.filter((g) => g.progress < 100);
+        const done = data.data.filter((g) => g.progress >= 100);
 
-  // Adds a new goal to the active goals list
-  const addGoal = () => {
-    if (!newGoal.trim()) {
-      console.warn("Attempted to add an empty goal.");
-      return;
+        setGoals(active);
+        setCompletedGoals(done);
+      })
+      .catch(console.error);
+  }, []);
+
+  // ------------------------
+  // Add new goal
+  // ------------------------
+  const addGoal = async () => {
+    if (!newGoal.trim()) return;
+
+    const res = await fetch("http://localhost:3000/api/goals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        goal: newGoal.trim(),
+        progress: 0,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      setGoals([...goals, data.data]);
+      setNewGoal("");
     }
-    setGoals([...goals, newGoal.trim()]);
-    setNewGoal('');
-    console.log("Added goal:", newGoal);
   };
 
-  // Removes a goal by index
-  const removeGoal = (i) => {
-    console.log("Removed goal:", goals[i]);
-    setGoals(goals.filter((_, idx) => idx !== i));
+  // ------------------------
+  // Delete goal
+  // ------------------------
+  const removeGoal = async (id) => {
+    await fetch(`http://localhost:3000/api/goals/${id}`, {
+      method: "DELETE",
+    });
+
+    setGoals(goals.filter((g) => g.id !== id));
   };
 
-  // Moves a goal from active to completed
-  const completeGoal = (i) => {
-    const completed = goals[i];
-    setCompletedGoals([...completedGoals, completed]);
-    removeGoal(i);
-    console.log("Completed goal:", completed);
+  // ------------------------
+  // Complete goal (progress = 100)
+  // ------------------------
+  const completeGoal = async (goal) => {
+    await fetch(`http://localhost:3000/api/goals/${goal.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progress: 100 }),
+    });
+
+    setGoals(goals.filter((g) => g.id !== goal.id));
+    setCompletedGoals([...completedGoals, { ...goal, progress: 100 }]);
   };
 
-  // Handles controlled input
-  const handleInputChange = (event) => {
-    setNewGoal(event.target.value);
-  };
-
-  // Clears all goals (new functionality)
+  // ------------------------
+  // Clear both lists locally (safe)
+  // ------------------------
   const clearAllGoals = () => {
     setGoals([]);
     setCompletedGoals([]);
-    console.log("All goals cleared");
   };
 
-  // ----------------------------
-  // Reusable styles
-  // ----------------------------
+  // Styles
   const btnPrimary =
-    "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition cursor-pointer";
+    "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold hover:bg-[#3b237f] transition";
 
   const btnComplete =
-    "px-3 py-1 rounded bg-green-300 hover:bg-green-400 text-xs font-semibold transition cursor-pointer";
+    "px-3 py-1 rounded bg-green-300 hover:bg-green-400 text-xs font-semibold";
 
   const btnRemove =
-    "px-3 py-1 rounded bg-red-300 hover:bg-red-400 text-xs font-semibold transition cursor-pointer";
+    "px-3 py-1 rounded bg-red-300 hover:bg-red-400 text-xs font-semibold";
 
-  // ----------------------------
-  // Render Section
-  // ----------------------------
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4 flex flex-col">
-      {/* Header */}
-      <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between mb-6">
+      <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
         <Link
           to="/profile"
-          className="inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90"
+          className="px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm hover:opacity-90"
         >
           Back to Profile Dashboard
         </Link>
-        <Link to="/" aria-label="Home">
-          <img
-            src="/smartfit_logo.png"
-            alt="SMARTFIT logo"
-            className="h-12 w-auto md:h-16"
-          />
+
+        <Link to="/">
+          <img src="/smartfit_logo.png" className="h-12 md:h-16" />
         </Link>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-md md:max-w-xl flex-grow">
+      <main className="mx-auto w-full max-w-xl flex-grow">
         <h1 className="text-4xl font-semibold mb-2">Goals</h1>
         <p className="text-gray-600 mb-6">
-          Track your progress and stay consistent with your fitness journey.
+          Track your progress and stay consistent.
         </p>
 
-        {/* Add Goal Section */}
+        {/* Add Goal */}
         <div className="flex flex-col items-center mb-8">
           <input
             type="text"
             value={newGoal}
-            onChange={handleInputChange}
+            onChange={(e) => setNewGoal(e.target.value)}
             placeholder="Enter new goal"
-            className="w-full px-4 py-2 mb-4 border-2 border-gray-300 rounded-lg focus:border-[#462c9f] focus:outline-none"
-            aria-label="Goal input field"
+            className="w-full px-4 py-2 mb-4 border-2 border-gray-300 rounded-lg focus:border-[#462c9f]"
           />
-          <button
-            type="button"
-            onClick={addGoal}
-            className={`${btnPrimary} w-auto px-6`}
-            aria-label="Add new goal"
-          >
+
+          <button onClick={addGoal} className={`${btnPrimary} w-auto px-6`}>
             Add Goal
           </button>
 
-          {/* Clear all goals button */}
           <button
             onClick={clearAllGoals}
-            className="mt-3 px-4 py-2 rounded bg-red-200 hover:bg-red-300 font-semibold text-sm"
-            aria-label="Clear all goals"
+            className="mt-3 px-4 py-2 rounded bg-red-200 hover:bg-red-300 text-sm font-semibold"
           >
             Clear All Goals
           </button>
@@ -139,63 +139,50 @@ function Goals() {
         {/* Current Goals */}
         <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4">Current Goals</h2>
-          <div className="grid grid-cols-1 gap-3 mb-4">
-            {goals.length > 0 ? (
-              goals.map((goal, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center bg-white shadow-sm rounded-lg px-4 py-3 border border-gray-200"
-                >
-                  <span className="text-lg">{goal}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => completeGoal(index)}
-                      className={btnComplete}
-                      aria-label={`Complete goal ${index + 1}`}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      onClick={() => removeGoal(index)}
-                      className={btnRemove}
-                      aria-label={`Remove goal ${index + 1}`}
-                    >
-                      ✕
-                    </button>
-                  </div>
+
+          {goals.length ? (
+            goals.map((g) => (
+              <div
+                key={g.id}
+                className="flex justify-between items-center bg-white shadow-sm rounded-lg px-4 py-3 border"
+              >
+                <span className="text-lg">{g.goal}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => completeGoal(g)} className={btnComplete}>
+                    ✓
+                  </button>
+                  <button onClick={() => removeGoal(g.id)} className={btnRemove}>
+                    ✕
+                  </button>
                 </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic text-center">
-                No current goals added yet.
-              </p>
-            )}
-          </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 italic">No current goals.</p>
+          )}
         </section>
 
         {/* Completed Goals */}
         <section className="mb-6">
           <h2 className="text-2xl font-semibold mb-4">Completed Goals</h2>
-          <div className="grid grid-cols-1 gap-3 text-gray-500">
-            {completedGoals.length > 0 ? (
-              completedGoals.map((goal, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-100 rounded-lg px-4 py-3 line-through shadow-sm border border-gray-200"
-                >
-                  {goal}
-                </div>
-              ))
-            ) : (
-              <p className="italic text-center">No goals completed yet.</p>
-            )}
-          </div>
+
+          {completedGoals.length ? (
+            completedGoals.map((g) => (
+              <div
+                key={g.id}
+                className="bg-gray-100 rounded-lg px-4 py-3 line-through border"
+              >
+                {g.goal}
+              </div>
+            ))
+          ) : (
+            <p className="italic text-center">No goals completed yet.</p>
+          )}
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="text-center text-sm text-gray-400 mt-6">
-        © {new Date().getFullYear()} SMARTFIT. All rights reserved.
+        © {new Date().getFullYear()} SMARTFIT
       </footer>
     </div>
   );
