@@ -7,12 +7,31 @@ function Login() {
 
   const navigate = useNavigate()
 
-  const handleLogIn = () => {
-    // Placeholder for login logic
-    alert('Log in functionality to be implemented.')
-    navigate('/')
+  const handleLogIn = async (e) => {
+    e.preventDefault()
+
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data.message || "Login failed")
+        return
+      }
+
+      alert("Login successful!")
+      navigate("/")
+    } catch (err) {
+      console.error(err)
+      alert("Something went wrong connecting to server.")
+    }
   }
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
       <div className="w-full max-w-md p-8 space-y-6">
@@ -22,7 +41,7 @@ function Login() {
 
         <h2 className="text-center text-3xl font-semibold">Log In</h2>
 
-        <form className="mt-4 space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="mt-4 space-y-4" onSubmit={handleLogIn}>
           <div>
             <input
               onChange={(e) => setEmail(e.target.value)}
@@ -48,7 +67,6 @@ function Login() {
           <button
             type="submit"
             className="w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium hover:bg-[#3b237f] hover:cursor-pointer transition-colors"
-            onClick={handleLogIn}
           >
             Log in
           </button>
@@ -57,7 +75,7 @@ function Login() {
         <p className="text-center text-sm text-gray-600">
           Don’t have an account? Click{' '}
           <Link to="/register" className="text-[#462c9f] hover:underline">
-          here to sign up
+            here to sign up
           </Link>.
         </p>
       </div>
