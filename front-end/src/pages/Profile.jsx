@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 // Shared button styles
@@ -6,6 +6,50 @@ const btnPrimary = "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-bas
 const btnOutline = "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#462c9f] text-base font-semibold text-center hover:bg-[#462c9f] hover:text-white transition"
 
 function Profile() {
+  const userId = 1 // TEMP until login PR merges
+
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // ------------------------
+  // Load user data on page load
+  // ------------------------
+  useEffect(() => {
+    fetch(`http://localhost:3000/api/users/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          alert('Failed to load profile')
+          return
+        }
+        setUser(data.data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        alert('Something went wrong connecting to server.')
+        setLoading(false)
+      })
+  }, [userId])
+
+  // Show loading while fetching
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#efefed]">
+        <p className="text-xl text-gray-600">Loading profile...</p>
+      </div>
+    )
+  }
+
+  // Show error if user not found
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#efefed]">
+        <p className="text-xl text-red-600">Failed to load profile</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#efefed] px-6 py-4">
       {/* Header with Back Button and Logo */}
@@ -29,10 +73,54 @@ function Profile() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-6">Profile</h1>
 
-        {/* User Info */}
-        <div className="space-y-1">
-          <p className="text-lg">[Full Name]</p>
-          <p className="text-lg">[Email Address]</p>
+        {/* User Info Card */}
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 max-w-md">
+          <div className="space-y-3">
+            {/* Name */}
+            <div>
+              <p className="text-sm text-gray-600">Name</p>
+              <p className="text-lg font-semibold">{user.name}</p>
+            </div>
+            
+            {/* Email */}
+            <div>
+              <p className="text-sm text-gray-600">Email</p>
+              <p className="text-lg">{user.email}</p>
+            </div>
+
+            {/* Goals */}
+            {user.goals && user.goals.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-600">Goals</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {user.goals.map((goal, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-[#462c9f] text-white text-sm rounded-full"
+                    >
+                      {goal}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Member Since */}
+            <div>
+              <p className="text-sm text-gray-600">Member Since</p>
+              <p className="text-lg">
+                {new Date(user.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+
+            {/* Last Updated */}
+            <div>
+              <p className="text-sm text-gray-600">Last Updated</p>
+              <p className="text-base text-gray-500">
+                {new Date(user.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
