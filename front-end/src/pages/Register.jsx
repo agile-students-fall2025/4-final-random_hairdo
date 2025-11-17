@@ -23,13 +23,13 @@ function Register() {
     )
   }, [email, password, confirmPassword])
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     setEmailError('')
     setPasswordError('')
 
     if (!isNyuEmail(email)) {
-      setEmailError('You must register with a valid @nyu.edu email (e.g. ab1234@nyu.edu).')
+      setEmailError('You must register with a valid @nyu.edu email.')
       return
     }
 
@@ -38,10 +38,33 @@ function Register() {
       return
     }
 
-    // Placeholder for register logic
-    alert('Register functionality to be implemented.')
-    navigate('/')
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: email.split('@')[0], // temporary name
+          email,
+          password
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setEmailError(data.message || "Registration failed.")
+        return
+      }
+
+      alert("Registration successful!")
+      navigate("/login")
+
+    } catch (err) {
+      console.error(err)
+      alert("Server error. Try again later.")
+    }
   }
+
 
   const getEmailHelperText = () => {
     if (emailError) return emailError
