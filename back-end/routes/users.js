@@ -3,7 +3,7 @@
 // Sprint 2: Mock authentication (no JWT/bcrypt yet - Sprint 3)
 
 import express from 'express'
-import { users, getNextId, findById } from '../utils/mockData.js'
+import { users, goals, getNextId, findById } from '../utils/mockData.js'
 
 const router = express.Router()
 
@@ -177,6 +177,34 @@ router.put('/:id', (req, res) => {
   
   delete updates.id
   delete updates.password
+  
+  // ============================================
+  // NEW: Sync goals array with Goals API
+  // ============================================
+  if (updates.goals && Array.isArray(updates.goals)) {
+    // Remove all existing goals for this user
+    const existingGoalIndices = []
+    goals.forEach((g, index) => {
+      if (g.userId === user.id) {
+        existingGoalIndices.push(index)
+      }
+    })
+    // Remove in reverse order to avoid index issues
+    existingGoalIndices.reverse().forEach(index => {
+      goals.splice(index, 1)
+    })
+    
+    // Add new goals from profile to Goals API
+    updates.goals.forEach(goalText => {
+      goals.push({
+        id: getNextId(goals),
+        userId: user.id,
+        goal: goalText,
+        progress: 0
+      })
+    })
+  }
+  // ============================================
   
   Object.assign(user, updates)
   user.updatedAt = new Date().toISOString()
