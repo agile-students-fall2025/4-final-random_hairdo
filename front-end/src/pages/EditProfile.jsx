@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 // Shared button styles
@@ -9,12 +9,42 @@ const btnOutline =
 
 function EditProfile() {
   const navigate = useNavigate()
+  const userId = 1 // TEMP until login PR merges
   
   // State for form inputs
   const [formData, setFormData] = useState({
-    fullName: 'Loream',
-    email: 'lpsum@nyu.edu'
+    name: '',
+    email: '',
+    goals: []
   })
+
+  const [loading, setLoading] = useState(true)
+  const [goalInput, setGoalInput] = useState('')
+
+  // ------------------------
+  // Load user data on page load
+  // ------------------------
+  useEffect(() => {
+    fetch(`http://localhost:3000/api/users/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) return
+        
+        // Populate form with current user data
+        const user = data.data
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          goals: user.goals || []
+        })
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        alert('Failed to load profile')
+        setLoading(false)
+      })
+  }, [userId])
 
   // Handle input changes
   const handleChange = (e) => {
@@ -25,11 +55,58 @@ function EditProfile() {
     }))
   }
 
+  // Add goal to list
+  const addGoal = () => {
+    if (!goalInput.trim()) return
+    
+    setFormData(prevData => ({
+      ...prevData,
+      goals: [...prevData.goals, goalInput.trim()]
+    }))
+    setGoalInput('')
+  }
+
+  // Remove goal from list
+  const removeGoal = (index) => {
+    setFormData(prevData => ({
+      ...prevData,
+      goals: prevData.goals.filter((_, i) => i !== index)
+    }))
+  }
+
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Profile updated:', formData)
-    navigate('/profile')
+    
+    try {
+      const res = await fetch(`http://localhost:3000/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        alert(data.message || 'Update failed')
+        return
+      }
+      
+      alert('Profile updated successfully!')
+      navigate('/profile')
+    } catch (err) {
+      console.error(err)
+      alert('Something went wrong connecting to server.')
+    }
+  }
+
+  // Show loading while fetching
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#efefed]">
+        <p className="text-xl text-gray-600">Loading profile...</p>
+      </div>
+    )
   }
 
   return (
@@ -61,35 +138,91 @@ function EditProfile() {
 
       {/* Form Card */}
       <div className="max-w-md mx-auto w-full bg-white p-6 rounded-lg shadow-md border border-gray-200">
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-8">
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-6">
           {/* Full Name Input */}
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name
+            </label>
             <input
               type="text"
-              name="fullName"
-              value={formData.fullName}
+              name="name"
+              value={formData.name}
               onChange={handleChange}
-              placeholder="Full Name: Loream"
+              placeholder="Full Name"
               required
-              className="w-full px-4 py-3 border-2 border-black bg-white text-[#282f3e] placeholder-[#282f3e] focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+              className="w-full px-4 py-3 border-2 border-black bg-white text-[#282f3e] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
             />
           </div>
 
           {/* Email Input */}
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="Email Address: lpsum@nyu.edu"
+              placeholder="Email Address"
               required
-              className="w-full px-4 py-3 border-2 border-black bg-white text-[#282f3e] placeholder-[#282f3e] focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+              className="w-full px-4 py-3 border-2 border-black bg-white text-[#282f3e] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
             />
           </div>
 
+          {/* Goals Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fitness Goals
+            </label>
+            
+            {/* Current Goals */}
+            {formData.goals.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {formData.goals.map((goal, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-1 px-3 py-1 bg-[#462c9f] text-white text-sm rounded-full"
+                  >
+                    <span>{goal}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeGoal(index)}
+                      className="ml-1 text-white hover:text-red-200"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Goal Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addGoal())}
+                placeholder="Add a goal (e.g., Weight Loss)"
+                className="flex-1 px-4 py-2 border-2 border-gray-300 bg-white text-[#282f3e] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+              />
+              <button
+                type="button"
+                onClick={addGoal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold"
+              >
+                Add
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Press Enter or click Add to add goals
+            </p>
+          </div>
+
           {/* Done Button */}
-          <div className="flex justify-center pt-6">
+          <div className="flex justify-center pt-4">
             <button
               type="submit"
               className="px-16 py-4 rounded-lg bg-[#462c9f] text-white text-lg font-semibold hover:bg-[#3b237f] transition"
