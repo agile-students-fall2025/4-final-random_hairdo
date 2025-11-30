@@ -133,44 +133,23 @@ const queueSchema = new mongoose.Schema({
   timestamps: true
 })
 
-// Goal Schema
+// Goal Schema - Simplified to match Sprint 2 & current frontend
 const goalSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  title: {
+  goal: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
-  description: {
-    type: String
-  },
-  type: {
-    type: String,
-    required: true
-  },
-  targetValue: {
+  progress: {
     type: Number,
-    required: true
-  },
-  currentValue: {
-    type: Number,
-    default: 0
-  },
-  unit: {
-    type: String,
-    required: true
-  },
-  targetDate: {
-    type: Date,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['not-started', 'in-progress', 'completed', 'abandoned'],
-    default: 'not-started'
+    default: 0,
+    min: 0,
+    max: 100
   }
 }, {
   timestamps: true
