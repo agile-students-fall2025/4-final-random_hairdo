@@ -1,0 +1,71 @@
+import jwt from 'jsonwebtoken'
+
+/**
+ * Authentication middleware to protect routes
+ * Verifies JWT token from Authorization header
+ */
+export const authenticate = (req, res, next) => {
+  try {
+    // Get token from Authorization header (Bearer token)
+    const authHeader = req.header('Authorization')
+    
+    if (!authHeader) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'No token provided. Authorization denied.' 
+      })
+    }
+
+    // Extract token (format: "Bearer <token>")
+    const token = authHeader.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid token format. Authorization denied.' 
+      })
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    
+    // Add user info to request object
+    req.user = decoded.user
+    
+    next()
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Token expired. Please login again.' 
+      })
+    }
+    
+    res.status(401).json({ 
+      success: false,
+      message: 'Invalid token. Authorization denied.' 
+    })
+  }
+}
+
+/**
+ * Generate JWT token for a user
+ * @param {Object} user - User object with id
+ * @returns {String} JWT token
+ */
+export const generateToken = (user) => {
+  const payload = {
+    user: {
+      id: user._id || user.id,
+      email: user.email
+    }
+  }
+
+  return jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+  )
+}
+
+export default { authenticate, generateToken }

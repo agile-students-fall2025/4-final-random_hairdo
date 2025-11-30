@@ -332,10 +332,9 @@ export const Notification = mongoose.model('Notification', notificationSchema)
 export const FAQ = mongoose.model('FAQ', faqSchema)
 export const SupportIssue = mongoose.model('SupportIssue', supportIssueSchema)
 
-// Database connection
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smartfit', {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     })
