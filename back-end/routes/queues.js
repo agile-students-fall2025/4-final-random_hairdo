@@ -1,57 +1,75 @@
 import express from 'express'
-import { queues, getNextId } from '../utils/mockData.js'
+import { body, validationResult } from 'express-validator'
+import { Queue } from '../db.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
 
 /**
  * POST /api/queues
  * Join a queue for equipment
- * Body: { userId, zoneId, position?, estimatedWait? }
+ * Body: { userId, zoneId, facilityId?, position?, estimatedWait? }
  * Returns: Queue entry with ID and confirmation details
  * Used by: Zones page to Queue Confirmation flow
  */
-router.post('/', (req, res) => {
-  const { userId, zoneId, position, estimatedWait } = req.body
-  
-  if (!userId || !zoneId) {
+router.post('/', [
+  authenticate,
+  body('userId').notEmpty().withMessage('userId is required'),
+  body('zoneId').notEmpty().withMessage('zoneId is required')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
-      error: 'userId and zoneId are required'
+      errors: errors.array()
     })
   }
   
-  const existingQueue = queues.find(
-    q => q.userId === userId && q.status === 'active'
-  )
-  
-  if (existingQueue) {
-    return res.status(409).json({
+  try {
+    const { userId, zoneId, facilityId, position, estimatedWait } = req.body
+    
+    // Check if user already has an active queue
+    const existingQueue = await Queue.findOne({
+      userId,
+      status: 'active'
+    })
+    
+    if (existingQueue) {
+      return res.status(409).json({
+        success: false,
+        error: 'User already has an active queue',
+        data: existingQueue
+      })
+    }
+    
+    const newQueue = new Queue({
+      userId,
+      zoneId,
+      facilityId: facilityId || null,
+      position: position || 1,
+      estimatedWait: estimatedWait || 10,
+      status: 'active',
+      joinedAt: new Date(),
+      completedAt: null
+    })
+    
+    await newQueue.save()
+    
+    // Populate references for response
+    await newQueue.populate(['userId', 'zoneId', 'facilityId'])
+    
+    res.status(201).json({
+      success: true,
+      data: newQueue,
+      message: 'Successfully joined queue'
+    })
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      error: 'User already has an active queue',
-      data: existingQueue
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  const newQueue = {
-    id: getNextId(queues),
-    userId: parseInt(userId),
-    zoneId: parseInt(zoneId),
-    facilityId: req.body.facilityId || null,
-    position: position || 1,
-    estimatedWait: estimatedWait || 10,
-    status: 'active',
-    joinedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    completedAt: null
-  }
-  
-  queues.push(newQueue)
-  
-  res.status(201).json({
-    success: true,
-    data: newQueue,
-    message: 'Successfully joined queue'
-  })
 })
 
 /**
@@ -60,21 +78,38 @@ router.post('/', (req, res) => {
  * Returns: Queue position, estimated wait time, status
  * Used by: Confirmed Queue page (for real-time updates)
  */
-router.get('/:id', (req, res) => {
-  const queueId = parseInt(req.params.id)
-  const queue = queues.find(q => q.id === queueId)
-  
-  if (!queue) {
-    return res.status(404).json({
+router.get('/:id', authenticate, async (req, res) => {
+  try {
+    const queue = await Queue.findById(req.params.id)
+      .populate('userId')
+      .populate('zoneId')
+      .populate('facilityId')
+    
+    if (!queue) {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    res.json({
+      success: true,
+      data: queue
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Queue entry not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  res.json({
-    success: true,
-    data: queue
-  })
 })
 
 /**
@@ -83,23 +118,33 @@ router.get('/:id', (req, res) => {
  * Returns: List of active and past queue entries
  * Used by: Home page (Dashboard), History page
  */
-router.get('/user/:userId', (req, res) => {
-  const userId = parseInt(req.params.userId)
-  const { status } = req.query
-  
-  let userQueues = queues.filter(q => q.userId === userId)
-  
-  if (status) {
-    userQueues = userQueues.filter(q => q.status === status)
+router.get('/user/:userId', authenticate, async (req, res) => {
+  try {
+    const { status } = req.query
+    
+    let query = { userId: req.params.userId }
+    if (status) {
+      query.status = status
+    }
+    
+    const userQueues = await Queue.find(query)
+      .populate('userId')
+      .populate('zoneId')
+      .populate('facilityId')
+      .sort({ joinedAt: -1 })
+    
+    res.json({
+      success: true,
+      data: userQueues,
+      count: userQueues.length
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
   }
-  
-  userQueues.sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt))
-  
-  res.json({
-    success: true,
-    data: userQueues,
-    count: userQueues.length
-  })
 })
 
 /**
@@ -108,50 +153,67 @@ router.get('/user/:userId', (req, res) => {
  * Body: { position?, estimatedWait?, status? }
  * Used by: Queue page
  */
-router.put('/:id', (req, res) => {
-  const queueId = parseInt(req.params.id)
-  const queueIndex = queues.findIndex(q => q.id === queueId)
-  
-  if (queueIndex === -1) {
-    return res.status(404).json({
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    const queue = await Queue.findById(req.params.id)
+    
+    if (!queue) {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    const { position, estimatedWait, status } = req.body
+    
+    if (position !== undefined) {
+      queue.position = position
+      
+      if (position === 0) {
+        queue.estimatedWait = 0
+        queue.status = 'completed'
+        queue.completedAt = new Date()
+      } else {
+        const waitMinutes = position * 7
+        queue.estimatedWait = waitMinutes
+      }
+    }
+    
+    if (estimatedWait !== undefined) {
+      queue.estimatedWait = estimatedWait
+    }
+    
+    if (status !== undefined) {
+      queue.status = status
+      if (status === 'completed' || status === 'cancelled') {
+        queue.completedAt = new Date()
+      }
+    }
+    
+    await queue.save()
+    
+    // Populate references for response
+    await queue.populate(['userId', 'zoneId', 'facilityId'])
+    
+    res.json({
+      success: true,
+      data: queue,
+      message: 'Queue updated successfully'
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Queue entry not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  const { position, estimatedWait, status } = req.body
-  
-  if (position !== undefined) {
-    queues[queueIndex].position = position
-    
-    if (position === 0) {
-      queues[queueIndex].estimatedWait = 0
-      queues[queueIndex].status = 'completed'
-      queues[queueIndex].completedAt = new Date().toISOString()
-    } else {
-      const waitMinutes = position * 7
-      queues[queueIndex].estimatedWait = waitMinutes
-    }
-  }
-  
-  if (estimatedWait !== undefined) {
-    queues[queueIndex].estimatedWait = estimatedWait
-  }
-  
-  if (status !== undefined) {
-    queues[queueIndex].status = status
-    if (status === 'completed' || status === 'cancelled') {
-      queues[queueIndex].completedAt = new Date().toISOString()
-    }
-  }
-  
-  queues[queueIndex].updatedAt = new Date().toISOString()
-  
-  res.json({
-    success: true,
-    data: queues[queueIndex],
-    message: 'Queue updated successfully'
-  })
 })
 
 /**
@@ -159,24 +221,46 @@ router.put('/:id', (req, res) => {
  * Leave a queue
  * Used by: Confirmed Queue page (cancel button)
  */
-router.delete('/:id', (req, res) => {
-  const queueId = parseInt(req.params.id)
-  const queueIndex = queues.findIndex(q => q.id === queueId)
-  
-  if (queueIndex === -1) {
-    return res.status(404).json({
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const queue = await Queue.findById(req.params.id)
+    
+    if (!queue) {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    // Verify ownership
+    if (queue.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this queue entry'
+      })
+    }
+    
+    await Queue.findByIdAndDelete(req.params.id)
+    
+    res.json({
+      success: true,
+      data: queue,
+      message: 'Successfully left queue'
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Queue entry not found'
+      })
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Queue entry not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  const deletedQueue = queues.splice(queueIndex, 1)[0]
-  
-  res.json({
-    success: true,
-    data: deletedQueue,
-    message: 'Successfully left queue'
-  })
 })
 
 export default router
