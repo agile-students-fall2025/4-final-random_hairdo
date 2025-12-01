@@ -3,8 +3,9 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
-import path from 'path'                    // For static file paths
-import { fileURLToPath } from 'url'        // For ES6 __dirname equivalent
+import path from 'path'
+import { fileURLToPath } from 'url'
+import connectDB from './db.js'
 
 // Route modules
 import facilityRoutes from './routes/facilities.js'
@@ -20,6 +21,12 @@ import authRoutes from './routes/auth.js'
 
 // Load environment variables
 dotenv.config({ silent: true })
+
+// Connect to MongoDB
+connectDB().catch(err => {
+  console.error('Failed to connect to MongoDB:', err)
+  process.exit(1)
+})
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url)
