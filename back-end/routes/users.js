@@ -1,265 +1,215 @@
 // routes/users.js
 // User profile and authentication routes
-// Sprint 2: Mock authentication (no JWT/bcrypt yet - Sprint 3)
+// Migrated to MongoDB + JWT for Sprint 3
 
 import express from 'express'
-import { users, goals, getNextId, findById } from '../utils/mockData.js'
+import { User } from '../db.js' // Mongoose User model
+import { generateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
 // ============================================
 // POST /api/users/register
 // ============================================
-router.post('/register', (req, res) => {
-  const { name, email, password, year, major, fitnessLevel, preferredGym } = req.body
-  
-  if (!name || !email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: 'Missing required fields',
-      message: 'name, email, and password are required'
+router.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, year, major, fitnessLevel, preferredGym } = req.body
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        message: 'name, email, and password are required'
+      })
+    }
+
+    if (!email.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid email format',
+        message: 'Email must contain @ symbol'
+      })
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid password',
+        message: 'Password must be at least 6 characters long'
+      })
+    }
+
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already registered',
+        message: 'An account with this email already exists'
+      })
+    }
+
+    const newUser = new User({
+      name,
+      email,
+      password,
+      year: year || 'Not specified',
+      major: major || 'Not specified',
+      fitnessLevel: fitnessLevel || 'Beginner',
+      preferredGym: preferredGym || 'Palladium',
+      bio: '',
+      goals: []
     })
-  }
-  
-  if (!email.includes('@')) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid email format',
-      message: 'Email must contain @ symbol'
+
+    await newUser.save()
+
+    const token = generateToken(newUser)
+
+    res.status(201).json({
+      success: true,
+      data: newUser.toSafeObject(),
+      token,
+      message: 'User registered successfully'
     })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
   }
-  
-  if (password.length < 6) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid password',
-      message: 'Password must be at least 6 characters long'
-    })
-  }
-  
-  const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase())
-  if (existingUser) {
-    return res.status(409).json({
-      success: false,
-      error: 'Email already registered',
-      message: 'An account with this email already exists'
-    })
-  }
-  
-  const newUser = {
-    id: getNextId(users),
-    name,
-    email,
-    password,
-    year: year || 'Not specified',
-    major: major || 'Not specified',
-    fitnessLevel: fitnessLevel || 'Beginner',
-    preferredGym: preferredGym || 'Palladium',
-    bio: '',
-    goals: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-  
-  users.push(newUser)
-  
-  const { password: _, ...userWithoutPassword } = newUser
-  
-  res.status(201).json({
-    success: true,
-    data: userWithoutPassword,
-    message: 'User registered successfully'
-  })
 })
 
 // ============================================
 // POST /api/users/login
 // ============================================
-router.post('/login', (req, res) => {
-  const { email, password } = req.body
-  
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: 'Missing required fields',
-      message: 'email and password are required'
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        message: 'email and password are required'
+      })
+    }
+
+    const user = await User.findOne({ email }).select('+password')
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+        message: 'Email or password is incorrect'
+      })
+    }
+
+    const isMatch = await user.comparePassword(password)
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+        message: 'Email or password is incorrect'
+      })
+    }
+
+    const token = generateToken(user)
+
+    res.json({
+      success: true,
+      data: user.toSafeObject(),
+      token,
+      message: 'Login successful'
     })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
   }
-  
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase())
-  
-  if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid credentials',
-      message: 'Email or password is incorrect'
-    })
-  }
-  
-  if (user.password !== password) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid credentials',
-      message: 'Email or password is incorrect'
-    })
-  }
-  
-  const { password: _, ...userWithoutPassword } = user
-  
-  res.json({
-    success: true,
-    data: userWithoutPassword,
-    message: 'Login successful'
-  })
 })
 
 // ============================================
 // GET /api/users/:id
 // ============================================
-router.get('/:id', (req, res) => {
-  const user = findById(users, req.params.id)
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'User not found'
-    })
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' })
+
+    res.json({ success: true, data: user.toSafeObject() })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
   }
-  
-  const { password, ...userWithoutPassword } = user
-  
-  res.json({
-    success: true,
-    data: userWithoutPassword
-  })
 })
 
 // ============================================
 // PUT /api/users/:id
 // ============================================
-router.put('/:id', (req, res) => {
-  const user = findById(users, req.params.id)
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'User not found'
-    })
-  }
-  
-  const updates = req.body
-  
-  if (Object.keys(updates).length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'No updates provided'
-    })
-  }
-  
-  if (updates.email && !updates.email.includes('@')) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid email format'
-    })
-  }
-  
-  if (updates.email && updates.email !== user.email) {
-    const existingUser = users.find(u => 
-      u.email.toLowerCase() === updates.email.toLowerCase() && u.id !== user.id
-    )
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        error: 'Email already in use'
-      })
+router.put('/:id', async (req, res) => {
+  try {
+    const updates = req.body
+    const user = await User.findById(req.params.id)
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' })
+
+    if (updates.email && updates.email !== user.email) {
+      const existingUser = await User.findOne({ email: updates.email })
+      if (existingUser) return res.status(409).json({ success: false, error: 'Email already in use' })
     }
+
+    // Prevent overriding password/id directly
+    delete updates.password
+    delete updates._id
+
+    // Sync goals if provided
+    if (updates.goals && Array.isArray(updates.goals)) {
+      user.goals = updates.goals.map(goal => ({ goal, progress: 0 }))
+      delete updates.goals
+    }
+
+    Object.assign(user, updates)
+    await user.save()
+
+    res.json({ success: true, data: user.toSafeObject(), message: 'Profile updated successfully' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
   }
-  
-  delete updates.id
-  delete updates.password
-  
-  // ============================================
-  // NEW: Sync goals array with Goals API
-  // ============================================
-  if (updates.goals && Array.isArray(updates.goals)) {
-    // Remove all existing goals for this user
-    const existingGoalIndices = []
-    goals.forEach((g, index) => {
-      if (g.userId === user.id) {
-        existingGoalIndices.push(index)
-      }
-    })
-    // Remove in reverse order to avoid index issues
-    existingGoalIndices.reverse().forEach(index => {
-      goals.splice(index, 1)
-    })
-    
-    // Add new goals from profile to Goals API
-    updates.goals.forEach(goalText => {
-      goals.push({
-        id: getNextId(goals),
-        userId: user.id,
-        goal: goalText,
-        progress: 0
-      })
-    })
-  }
-  // ============================================
-  
-  Object.assign(user, updates)
-  user.updatedAt = new Date().toISOString()
-  
-  const { password, ...userWithoutPassword } = user
-  
-  res.json({
-    success: true,
-    data: userWithoutPassword,
-    message: 'Profile updated successfully'
-  })
 })
 
 // ============================================
 // PUT /api/users/:id/password
 // ============================================
-router.put('/:id/password', (req, res) => {
-  const { newPassword } = req.body
-  
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({
-      success: false,
-      error: 'Password must be at least 6 characters long'
-    })
+router.put('/:id/password', async (req, res) => {
+  try {
+    const { newPassword } = req.body
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long' })
+    }
+
+    const user = await User.findById(req.params.id).select('+password')
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' })
+
+    user.password = newPassword
+    await user.save()
+
+    res.json({ success: true, message: 'Password updated successfully' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
   }
-  
-  const user = findById(users, req.params.id)
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'User not found'
-    })
-  }
-  
-  user.password = newPassword
-  user.updatedAt = new Date().toISOString()
-  
-  res.json({
-    success: true,
-    message: 'Password updated successfully'
-  })
 })
 
 // ============================================
 // GET /api/users (all users)
 // ============================================
-router.get('/', (req, res) => {
-  const usersWithoutPasswords = users.map(({ password, ...user }) => user)
-  
-  res.json({
-    success: true,
-    data: usersWithoutPasswords,
-    count: users.length
-  })
+router.get('/', async (req, res) => {
+  try {
+    const allUsers = await User.find()
+    res.json({
+      success: true,
+      data: allUsers.map(u => u.toSafeObject()),
+      count: allUsers.length
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false, message: 'Server error' })
+  }
 })
 
 export default router
