@@ -52,8 +52,7 @@ async function seedDatabase() {
         email: u.email,
         password: u.password,
         goals: u.goals,
-        createdAt: new Date(u.createdAt),
-        updatedAt: new Date(u.updatedAt)
+        // ← REMOVED createdAt and updatedAt - let Mongoose handle them
       })
       await doc.save()
       userIdMap.set(u.id, doc._id)
@@ -157,7 +156,7 @@ async function seedDatabase() {
         message: n.message,
         isRead: n.isRead,
         priority: n.priority,
-        relatedId: n.relatedId,
+        relatedId: null,  // ← Set to null for seed data (notifications schema allows null)
         relatedType: n.relatedType,
         createdAt: new Date(n.createdAt)
       })
