@@ -1,50 +1,72 @@
+// routes/auth.js
 import express from "express";
-import { users, getNextId } from "../utils/mockData.js";
+import jwt from "jsonwebtoken";
+import { User } from "../db.js";
 
 const router = express.Router();
 
-// 🧾 REGISTER: POST /api/auth/register
-router.post("/register", (req, res) => {
-  const { name, email, password } = req.body;
+// 🧾 REGISTER
+router.post("/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-  // Basic validation
-  if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: "All fields are required" });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "User already exists" });
+    }
+
+    // Create user
+    const newUser = new User({ name, email, password });
+    await newUser.save();
+
+    // Respond with safe object (no password)
+    res.status(201).json({ success: true, data: newUser.toSafeObject() });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  // Check if user exists
-  const existing = users.find(u => u.email === email);
-  if (existing) {
-    return res.status(409).json({ success: false, message: "User already exists" });
-  }
-
-  // Create new user
-  const newUser = { id: getNextId(users), name, email, password };
-  users.push(newUser);
-
-  res.status(201).json({ success: true, data: newUser });
 });
 
-// 🔐 LOGIN: POST /api/auth/login
-router.post("/login", (req, res) => {
-  const { email, password } = req.body;
+// 🔐 LOGIN
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  // Check fields
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: "Email and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    // Find user & select password explicitly
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Compare password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE || "7d" }
+    );
+
+    res.json({ success: true, data: { user: user.toSafeObject(), token } });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  // Match user
-  const user = users.find(u => u.email === email && u.password === password);
-  if (!user) {
-    return res.status(401).json({ success: false, message: "Invalid credentials" });
-  }
-
-  res.json({
-    success: true,
-    message: "Login successful",
-    data: { id: user.id, name: user.name, email: user.email }
-  });
 });
 
 export default router;
