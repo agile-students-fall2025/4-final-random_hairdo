@@ -1,5 +1,5 @@
 import express from 'express'
-import { zones } from '../utils/mockData.js' 
+import { Zone } from '../db.js'
 
 const router = express.Router()
 
@@ -10,28 +10,36 @@ const router = express.Router()
  * Returns: Zone name, queue length, wait time, capacity
  * Used by: Zones page
  */
-router.get('/', (req, res) => {
-  const { facilityId } = req.query
-  
-  let filteredZones = zones
-  
-  if (facilityId) {
-    const facId = parseInt(facilityId)
-    filteredZones = zones.filter(z => z.facilityId === facId)
+router.get('/', async (req, res) => {
+  try {
+    const { facilityId } = req.query
     
-    if (filteredZones.length === 0) {
+    let query = {}
+    if (facilityId) {
+      query.facilityId = facilityId
+    }
+    
+    const zones = await Zone.find(query).populate('facilityId')
+    
+    if (facilityId && zones.length === 0) {
       return res.status(404).json({
         success: false,
         error: `No zones found for facility ID ${facilityId}`
       })
     }
+    
+    res.json({
+      success: true,
+      data: zones,
+      count: zones.length
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
   }
-  
-  res.json({
-    success: true,
-    data: filteredZones,
-    count: filteredZones.length
-  })
 })
 
 /**
@@ -39,21 +47,35 @@ router.get('/', (req, res) => {
  * Get specific zone details
  * Returns: Detailed zone information including current queue status
  */
-router.get('/:id', (req, res) => {
-  const zoneId = parseInt(req.params.id)
-  const zone = zones.find(z => z.id === zoneId)
-  
-  if (!zone) {
-    return res.status(404).json({
+router.get('/:id', async (req, res) => {
+  try {
+    const zone = await Zone.findById(req.params.id).populate('facilityId')
+    
+    if (!zone) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zone not found'
+      })
+    }
+    
+    res.json({
+      success: true,
+      data: zone
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Zone not found'
+      })
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Zone not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  res.json({
-    success: true,
-    data: zone
-  })
 })
 
 export default router
