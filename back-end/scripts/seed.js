@@ -187,7 +187,7 @@ async function seedDatabase() {
       })
       await doc.save()
     }
-    console.log(${notifications.length} notifications created)
+    console.log(`${notifications.length} notifications created`)
 
     // Insert FAQs
     console.log('Seeding FAQs...')
