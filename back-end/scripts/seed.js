@@ -43,6 +43,8 @@ async function seedDatabase() {
     const userIdMap = new Map()
     const facilityIdMap = new Map()
     const zoneIdMap = new Map()
+    const queueIdMap = new Map()
+    const goalIdMap = new Map()
 
     // Insert Users
     console.log('Seeding users...')
@@ -106,6 +108,7 @@ async function seedDatabase() {
         updatedAt: new Date(g.updatedAt)
       })
       await doc.save()
+      goalIdMap.set(g.id, doc._id)
     }
     console.log(`${goals.length} goals created`)
 
@@ -143,6 +146,7 @@ async function seedDatabase() {
         completedAt: q.completedAt ? new Date(q.completedAt) : null
       })
       await doc.save()
+      queueIdMap.set(q.id, doc._id)
     }
     console.log(`${queues.length} queue records created`)
 
@@ -166,7 +170,7 @@ async function seedDatabase() {
             mappedRelatedId = zoneIdMap.get(n.relatedId)
             break
           default:
-            console.warn(Unknown relatedType: ${n.relatedType} for notification ${n.id})
+            console.warn(`Unknown relatedType: ${n.relatedType} for notification ${n.id}`)
         }
       }
 
