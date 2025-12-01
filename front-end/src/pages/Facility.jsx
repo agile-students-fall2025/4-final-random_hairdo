@@ -87,8 +87,8 @@ function Facility() {
         ) : (
           facilities.map((facility) => (
             <button
-              key={facility.id}
-              onClick={() => handleSelectFacility(facility.id)}
+              key={facility._id}
+              onClick={() => handleSelectFacility(facility._id)}
               className={btnPrimary}
             >
               <div className="text-left">

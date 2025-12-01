@@ -8,7 +8,7 @@ const btnOutline = "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[
 function Zone() {
   const navigate = useNavigate()
   const location = useLocation()
-  const facilityId = location.state?.facilityId || 1
+  const facilityId = location.state?.facilityId
 
   const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,6 +17,12 @@ function Zone() {
 
   useEffect(() => {
     const fetchZones = async () => {
+      if (!facilityId) {
+        setError('No facility selected. Please select a facility first.')
+        setLoading(false)
+        return
+      }
+      
       try {
         setLoading(true)
         const response = await fetch(`/api/zones?facilityId=${facilityId}`)
@@ -54,7 +60,7 @@ function Zone() {
         },
         body: JSON.stringify({
           userId: 1, // TODO: Get from auth context
-          zoneId: selectedZone.id,
+          zoneId: selectedZone._id,
           facilityId: facilityId,
           position: selectedZone.queueLength + 1,
           estimatedWait: selectedZone.averageWaitTime
@@ -69,7 +75,7 @@ function Zone() {
           state: { 
             zone: selectedZone,
             facilityId: facilityId,
-            queueId: data.data.id,
+            queueId: data.data._id,
             position: data.data.position,
             estimatedWait: data.data.estimatedWait
           } 
@@ -149,9 +155,9 @@ function Zone() {
         ) : (
           zones.map((zone) => (
             <div
-              key={zone.id}
+              key={zone._id}
               className={`p-5 rounded-lg border-2 ${
-                selectedZone?.id === zone.id
+                selectedZone?._id === zone._id
                   ? 'border-[#462c9f] bg-purple-50'
                   : 'border-gray-300 bg-white'
               }`}
@@ -176,9 +182,9 @@ function Zone() {
               </div>
               <button
                 onClick={() => handleJoinQueue(zone)}
-                className={selectedZone?.id === zone.id ? btnPrimary : btnOutline}
+                className={selectedZone?._id === zone._id ? btnPrimary : btnOutline}
               >
-                {selectedZone?.id === zone.id ? 'Selected' : 'Join Queue'}
+                {selectedZone?._id === zone._id ? 'Selected' : 'Join Queue'}
               </button>
             </div>
           ))
