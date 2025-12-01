@@ -101,14 +101,8 @@ async function seedDatabase() {
     for (const g of goals) {
       const doc = new Goal({
         userId: userIdMap.get(g.userId),
-        title: g.title,
-        description: g.description,
-        type: g.type,
-        targetValue: g.targetValue,
-        currentValue: g.currentValue,
-        unit: g.unit,
-        targetDate: new Date(g.targetDate),
-        status: g.status,
+        goal: g.goal,
+        progress: g.progress,
         createdAt: new Date(g.createdAt),
         updatedAt: new Date(g.updatedAt)
       })
