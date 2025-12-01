@@ -1,29 +1,69 @@
 import mongoose from 'mongoose'
+import bcrypt from 'bcryptjs'
 
 // User Schema
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, 'Name is required'],
     trim: true
   },
   email: {
     type: String,
-    required: true,
+    required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    match: [/\S+@\S+\.\S+/, 'Please enter a valid email address']
   },
   password: {
     type: String,
-    required: true
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false  // Don't include password in queries by default
   },
   goals: [{
-    type: String
+    type: String,
+    trim: true
   }]
 }, {
   timestamps: true
 })
+
+// PRE-SAVE HOOK: Hash password before saving
+userSchema.pre('save', async function() {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) {
+    return
+  }
+  
+  // Generate salt with 10 rounds (standard security practice)
+  const salt = await bcrypt.genSalt(10)
+  
+  // Hash the password with the salt
+  this.password = await bcrypt.hash(this.password, salt)
+})
+
+// ============================================
+// INSTANCE METHOD: Compare password for login
+// ============================================
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  try {
+    // bcrypt.compare handles hashing internally and compares
+    return await bcrypt.compare(candidatePassword, this.password)
+  } catch (error) {
+    throw new Error('Password comparison failed')
+  }
+}
+
+// ============================================
+// INSTANCE METHOD: Get user without password
+// ============================================
+userSchema.methods.toSafeObject = function() {
+  const userObject = this.toObject()
+  delete userObject.password
+  return userObject
+}
 
 // Facility Schema
 const facilitySchema = new mongoose.Schema({

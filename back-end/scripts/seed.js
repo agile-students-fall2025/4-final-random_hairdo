@@ -54,8 +54,7 @@ async function seedDatabase() {
         email: u.email,
         password: u.password,
         goals: u.goals,
-        createdAt: new Date(u.createdAt),
-        updatedAt: new Date(u.updatedAt)
+        // ← REMOVED createdAt and updatedAt - let Mongoose handle them
       })
       await doc.save()
       userIdMap.set(u.id, doc._id)
@@ -188,7 +187,7 @@ async function seedDatabase() {
       })
       await doc.save()
     }
-    console.log(`${notifications.length} notifications created`)
+    console.log(${notifications.length} notifications created)
 
     // Insert FAQs
     console.log('Seeding FAQs...')
