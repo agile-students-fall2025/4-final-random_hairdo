@@ -1,5 +1,5 @@
 import express from 'express'
-import { facilities } from '../utils/mockData.js'
+import { Facility } from '../db.js'
 
 const router = express.Router()
 
@@ -9,12 +9,22 @@ const router = express.Router()
  * Returns: List of available facilities with addresses
  * Used by: Facilities page
  */
-router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    data: facilities,
-    message: 'Facilities retrieved successfully'
-  })
+router.get('/', async (req, res) => {
+  try {
+    const facilities = await Facility.find().sort({ name: 1 })
+    
+    res.json({
+      success: true,
+      data: facilities,
+      message: 'Facilities retrieved successfully'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
 })
 
 /**
@@ -22,21 +32,35 @@ router.get('/', (req, res) => {
  * Get specific facility details
  * Returns: Facility name, address, capacity
  */
-router.get('/:id', (req, res) => {
-  const facilityId = parseInt(req.params.id)
-  const facility = facilities.find(f => f.id === facilityId)
-  
-  if (!facility) {
-    return res.status(404).json({
+router.get('/:id', async (req, res) => {
+  try {
+    const facility = await Facility.findById(req.params.id)
+    
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        error: 'Facility not found'
+      })
+    }
+    
+    res.json({
+      success: true,
+      data: facility
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Facility not found'
+      })
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Facility not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-  
-  res.json({
-    success: true,
-    data: facility
-  })
 })
 
 export default router
