@@ -43,6 +43,8 @@ async function seedDatabase() {
     const userIdMap = new Map()
     const facilityIdMap = new Map()
     const zoneIdMap = new Map()
+    const queueIdMap = new Map()
+    const goalIdMap = new Map()
 
     // Insert Users
     console.log('Seeding users...')
@@ -107,6 +109,7 @@ async function seedDatabase() {
         updatedAt: new Date(g.updatedAt)
       })
       await doc.save()
+      goalIdMap.set(g.id, doc._id)
     }
     console.log(`${goals.length} goals created`)
 
@@ -144,12 +147,34 @@ async function seedDatabase() {
         completedAt: q.completedAt ? new Date(q.completedAt) : null
       })
       await doc.save()
+      queueIdMap.set(q.id, doc._id)
     }
     console.log(`${queues.length} queue records created`)
 
     // Insert Notifications (with user references)
     console.log('Seeding notifications...')
     for (const n of notifications) {
+      // Map relatedId based on relatedType
+      let mappedRelatedId = null
+      if (n.relatedId) {
+        switch (n.relatedType) {
+          case 'queue':
+            mappedRelatedId = queueIdMap.get(n.relatedId)
+            break
+          case 'goal':
+            mappedRelatedId = goalIdMap.get(n.relatedId)
+            break
+          case 'facility':
+            mappedRelatedId = facilityIdMap.get(n.relatedId)
+            break
+          case 'zone':
+            mappedRelatedId = zoneIdMap.get(n.relatedId)
+            break
+          default:
+            console.warn(`Unknown relatedType: ${n.relatedType} for notification ${n.id}`)
+        }
+      }
+
       const doc = new Notification({
         userId: userIdMap.get(n.userId),
         type: n.type,
@@ -157,7 +182,7 @@ async function seedDatabase() {
         message: n.message,
         isRead: n.isRead,
         priority: n.priority,
-        relatedId: n.relatedId,
+        relatedId: mappedRelatedId,
         relatedType: n.relatedType,
         createdAt: new Date(n.createdAt)
       })
