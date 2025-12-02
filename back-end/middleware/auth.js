@@ -30,7 +30,8 @@ export const authenticate = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     
     // Add user info to request object
-    req.user = decoded.user
+    // Handle both payload formats: { user: {...} } and { id, email }
+    req.user = decoded.user || { id: decoded.id, email: decoded.email }
     
     next()
   } catch (error) {
