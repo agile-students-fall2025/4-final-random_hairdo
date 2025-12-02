@@ -6,8 +6,6 @@ const btnPrimary = "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-bas
 const btnOutline = "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#462c9f] text-base font-semibold text-center hover:bg-[#462c9f] hover:text-white transition"
 
 function Profile() {
-  const userId = 1 // TEMP until login PR merges
-
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -15,7 +13,20 @@ function Profile() {
   // Load user data on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/users/${userId}`)
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+    const token = localStorage.getItem('token')
+    
+    if (!storedUser._id || !token) {
+      alert('Please log in to view your profile')
+      setLoading(false)
+      return
+    }
+
+    fetch(`http://localhost:3000/api/users/${storedUser._id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) {
@@ -30,7 +41,7 @@ function Profile() {
         alert('Something went wrong connecting to server.')
         setLoading(false)
       })
-  }, [userId])
+  }, [])
 
   // Show loading while fetching
   if (loading) {

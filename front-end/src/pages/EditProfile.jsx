@@ -9,7 +9,7 @@ const btnOutline =
 
 function EditProfile() {
   const navigate = useNavigate()
-  const userId = 1 // TEMP until login PR merges
+  const [userId, setUserId] = useState(null)
   
   // State for form inputs
   const [formData, setFormData] = useState({
@@ -21,11 +21,26 @@ function EditProfile() {
   const [loading, setLoading] = useState(true)
   const [goalInput, setGoalInput] = useState('')
 
+  // Get user ID from localStorage
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+    if (storedUser._id) {
+      setUserId(storedUser._id)
+    }
+  }, [])
+
   // ------------------------
   // Load user data on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/users/${userId}`)
+    if (!userId) return
+    
+    const token = localStorage.getItem('token')
+    fetch(`http://localhost:3000/api/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) return
@@ -78,10 +93,19 @@ function EditProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    if (!userId) {
+      alert('Please log in first')
+      return
+    }
+    
     try {
+      const token = localStorage.getItem('token')
       const res = await fetch(`http://localhost:3000/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       })
       
@@ -91,6 +115,9 @@ function EditProfile() {
         alert(data.message || 'Update failed')
         return
       }
+      
+      // Update localStorage with new user data
+      localStorage.setItem('user', JSON.stringify(data.data))
       
       alert('Profile updated successfully!')
       navigate('/profile')

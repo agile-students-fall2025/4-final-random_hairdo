@@ -2,17 +2,31 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 function Goals() {
-  const userId = 1; // TEMP until login PR merges
-
+  const [userId, setUserId] = useState(null)
   const [goals, setGoals] = useState([]);
   const [completedGoals, setCompletedGoals] = useState([]);
   const [newGoal, setNewGoal] = useState("");
+
+  // Get user ID from localStorage
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+    if (storedUser._id) {
+      setUserId(storedUser._id)
+    }
+  }, [])
 
   // ------------------------
   // Load goals on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/goals/user/${userId}`)
+    if (!userId) return
+    
+    const token = localStorage.getItem('token')
+    fetch(`http://localhost:3000/api/goals/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) return;
@@ -25,17 +39,21 @@ function Goals() {
         setCompletedGoals(done);
       })
       .catch(console.error);
-  }, []);
+  }, [userId]);
 
   // ------------------------
   // Add new goal
   // ------------------------
   const addGoal = async () => {
-    if (!newGoal.trim()) return;
+    if (!newGoal.trim() || !userId) return;
 
+    const token = localStorage.getItem('token')
     const res = await fetch("http://localhost:3000/api/goals", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
       body: JSON.stringify({
         userId,
         goal: newGoal.trim(),
@@ -54,8 +72,12 @@ function Goals() {
   // Delete goal
   // ------------------------
   const removeGoal = async (id) => {
+    const token = localStorage.getItem('token')
     await fetch(`http://localhost:3000/api/goals/${id}`, {
       method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
     });
 
     setGoals(goals.filter((g) => g.id !== id));
@@ -65,9 +87,13 @@ function Goals() {
   // Complete goal (progress = 100)
   // ------------------------
   const completeGoal = async (goal) => {
+    const token = localStorage.getItem('token')
     await fetch(`http://localhost:3000/api/goals/${goal.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
       body: JSON.stringify({ progress: 100 }),
     });
 

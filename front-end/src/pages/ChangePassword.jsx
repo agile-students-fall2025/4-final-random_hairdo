@@ -4,9 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 function ChangePassword() {
   const navigate = useNavigate();
 
-  // TODO: replace with real logged-in user id from your auth state
-  const USER_ID = 1;
-
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState(null);
@@ -37,9 +34,19 @@ function ChangePassword() {
       setSubmitting(true);
       setMessage(null);
 
-      const res = await fetch(`/api/users/${USER_ID}/password`, {
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+      const token = localStorage.getItem('token')
+      
+      if (!storedUser._id || !token) {
+        throw new Error('Please log in first')
+      }
+
+      const res = await fetch(`/api/users/${storedUser._id}/password`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ newPassword }),
       });
 

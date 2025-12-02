@@ -2,17 +2,31 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 function History() {
-  const userId = 1 // TEMP until login PR merges
-
+  const [userId, setUserId] = useState(null)
   const [workoutHistory, setWorkoutHistory] = useState([])
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Get user ID from localStorage
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+    if (storedUser._id) {
+      setUserId(storedUser._id)
+    }
+  }, [])
 
   // ------------------------
   // Load workout history on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/history/user/${userId}`)
+    if (!userId) return
+    
+    const token = localStorage.getItem('token')
+    fetch(`http://localhost:3000/api/history/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) {

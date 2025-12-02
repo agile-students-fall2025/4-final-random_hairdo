@@ -4,9 +4,6 @@ import { useState } from "react";
 export default function Settings() {
   const navigate = useNavigate();
 
-  // TODO: replace with real logged-in user id
-  const USER_ID = 1;
-
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
 
@@ -25,9 +22,19 @@ export default function Settings() {
       setDeleting(true);
       setDeleteErr("");
 
-      const res = await fetch(`/api/settings/account/${USER_ID}`, {
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+      const token = localStorage.getItem('token')
+      
+      if (!storedUser._id || !token) {
+        throw new Error('Please log in first')
+      }
+
+      const res = await fetch(`/api/settings/account/${storedUser._id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
       });
 
       const body = await res.json().catch(() => ({}));
