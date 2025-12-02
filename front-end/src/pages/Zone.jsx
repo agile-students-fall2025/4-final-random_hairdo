@@ -52,14 +52,24 @@ function Zone() {
     if (!selectedZone) return
 
     try {
+      // Get token and user from localStorage
+      const token = localStorage.getItem('token')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      
+      if (!token || !user._id) {
+        alert('Please log in to join a queue')
+        return
+      }
+
       // Create queue entry in backend
       const response = await fetch('/api/queues', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          userId: 1, // TODO: Get from auth context
+          userId: user._id,
           zoneId: selectedZone._id,
           facilityId: facilityId,
           position: selectedZone.queueLength + 1,

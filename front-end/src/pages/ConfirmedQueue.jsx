@@ -6,7 +6,7 @@ const btnOutline = "w-1/2 px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#
 
 function ConfirmedQueue() {
   const location = useLocation()
-  const { zone, position: initialPosition, queueId, facilityId, estimatedWait: initialWait } = location.state || { 
+  const { zone, position: initialPosition, queueId, estimatedWait: initialWait } = location.state || { 
     zone: { name: 'Unknown Zone', averageWaitTime: 0 }, 
     position: 0,
     queueId: null,
@@ -24,7 +24,12 @@ function ConfirmedQueue() {
 
     const fetchQueueStatus = async () => {
       try {
-        const response = await fetch(`/api/queues/${queueId}`)
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/queues/${queueId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         const data = await response.json()
 
         if (data.success) {
@@ -64,8 +69,12 @@ function ConfirmedQueue() {
     if (!confirm('Are you sure you want to leave the queue?')) return
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`/api/queues/${queueId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
 
       const data = await response.json()

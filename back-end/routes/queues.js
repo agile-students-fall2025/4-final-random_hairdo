@@ -1,6 +1,6 @@
 import express from 'express'
 import { body, validationResult } from 'express-validator'
-import { Queue } from '../db.js'
+import { Queue, Notification } from '../db.js'
 import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -57,6 +57,24 @@ router.post('/', [
     
     // Populate references for response
     await newQueue.populate(['userId', 'zoneId', 'facilityId'])
+    
+    // Create a notification for joining the queue
+    try {
+      const notification = new Notification({
+        userId: userId,
+        type: 'queue_update',
+        title: 'Queue Joined',
+        message: `You joined the ${newQueue.zoneId.name} queue at position #${position}. Estimated wait: ${estimatedWait} minutes`,
+        isRead: false,
+        priority: 'medium',
+        relatedId: newQueue._id,
+        relatedType: 'queue'
+      })
+      await notification.save()
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError)
+      // Don't fail the queue join if notification fails
+    }
     
     res.status(201).json({
       success: true,
