@@ -62,7 +62,14 @@ function Home() {
           <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
         </div>
 
-        <div className='flex items-start'>
+        <div className='flex items-start gap-2'>
+          <Link
+            to="/notifications"
+            aria-label="Notifications"
+            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-[#462c9f] text-white text-sm font-medium hover:bg-[#3b237f] transition-colors"
+          >
+            Notifications
+          </Link>
           <Link
             to="/profile"
             aria-label="Profile"

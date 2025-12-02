@@ -2,10 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Notifications() {
-  const USER_ID = 1; // swap when you have auth
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [userId, setUserId] = useState(null);
+
+  // Get user ID from localStorage
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+    if (storedUser._id) {
+      setUserId(storedUser._id)
+    }
+  }, [])
 
   const btnDark =
     "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
@@ -16,9 +24,15 @@ export default function Notifications() {
 
   // helper
   async function api(path, opts = {}) {
+    const token = localStorage.getItem('token')
+    const headers = {
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    }
+    
     const res = await fetch(path, {
       method: opts.method || "GET",
-      headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
@@ -30,10 +44,12 @@ export default function Notifications() {
 
   // initial load
   useEffect(() => {
+    if (!userId) return;
+    
     (async () => {
       try {
         setLoading(true);
-        const { data } = await api(`/api/notifications/user/${USER_ID}`);
+        const { data } = await api(`/api/notifications/user/${userId}`);
         // backend uses isRead; normalize to isRead in state
         setItems(data);
       } catch (e) {
@@ -42,7 +58,7 @@ export default function Notifications() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [userId]);
 
   const unread = useMemo(() => items.filter(n => !n.isRead), [items]);
   const read = useMemo(() => items.filter(n => n.isRead), [items]);
@@ -139,9 +155,9 @@ export default function Notifications() {
                       Unread
                     </div>
                     <ul className="mt-1">
-                      {unread.map((n) => (
+                      {unread.map((n, index) => (
                         <li
-                          key={n.id}
+                          key={index}
                           className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50 cursor-pointer"
                           onClick={() => markOne(n.id)}
                           title="Mark as read"
