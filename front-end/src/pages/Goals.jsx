@@ -2,51 +2,64 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 function Goals() {
-  const userId = 1; // TEMP until login PR merges
-
   const [goals, setGoals] = useState([]);
   const [completedGoals, setCompletedGoals] = useState([]);
   const [newGoal, setNewGoal] = useState("");
 
+  const token = localStorage.getItem("token");
+
   // ------------------------
-  // Load goals on page load
+  // Fetch goals on component mount
   // ------------------------
+  const fetchGoals = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/goals", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!data) return;
+
+      const goalsData = Array.isArray(data) ? data : data.data;
+
+      const active = goalsData.filter((g) => g.progress < 100);
+      const done = goalsData.filter((g) => g.progress >= 100);
+
+      setGoals(active);
+      setCompletedGoals(done);
+    } catch (err) {
+      console.error("❌ Failed to fetch goals:", err);
+    }
+  };
+
   useEffect(() => {
-    fetch(`http://localhost:3000/api/goals/user/${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.success) return;
-
-        // Backend doesn't track "completed", so we simulate it:
-        const active = data.data.filter((g) => g.progress < 100);
-        const done = data.data.filter((g) => g.progress >= 100);
-
-        setGoals(active);
-        setCompletedGoals(done);
-      })
-      .catch(console.error);
+    fetchGoals();
   }, []);
 
   // ------------------------
   // Add new goal
   // ------------------------
   const addGoal = async () => {
-    if (!newGoal.trim()) return;
+    const trimmed = newGoal.trim();
+    if (!trimmed || !token) return;
 
-    const res = await fetch("http://localhost:3000/api/goals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        goal: newGoal.trim(),
-        progress: 0,
-      }),
-    });
+    try {
+      const res = await fetch("http://localhost:3000/api/goals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ goal: trimmed }),
+      });
 
-    const data = await res.json();
-    if (data.success) {
-      setGoals([...goals, data.data]);
+      const data = await res.json();
+      if (!data) return;
+
+      setGoals((prev) => [...prev, data]);
       setNewGoal("");
+    } catch (err) {
+      console.error("❌ Failed to add goal:", err);
     }
   };
 
@@ -54,42 +67,72 @@ function Goals() {
   // Delete goal
   // ------------------------
   const removeGoal = async (id) => {
-    await fetch(`http://localhost:3000/api/goals/${id}`, {
-      method: "DELETE",
-    });
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
 
-    setGoals(goals.filter((g) => g.id !== id));
+      setGoals(data.remainingGoals.filter((g) => g.progress < 100));
+      setCompletedGoals(data.remainingGoals.filter((g) => g.progress >= 100));
+    } catch (err) {
+      console.error("❌ Failed to delete goal:", err);
+    }
   };
 
   // ------------------------
-  // Complete goal (progress = 100)
+  // Complete goal
   // ------------------------
   const completeGoal = async (goal) => {
-    await fetch(`http://localhost:3000/api/goals/${goal.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ progress: 100 }),
-    });
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${goal._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ progress: 100 }),
+      });
 
-    setGoals(goals.filter((g) => g.id !== goal.id));
-    setCompletedGoals([...completedGoals, { ...goal, progress: 100 }]);
+      const data = await res.json();
+      if (!data) return;
+
+      setGoals((prev) => prev.filter((g) => g._id !== goal._id));
+      setCompletedGoals((prev) => [...prev, data]);
+    } catch (err) {
+      console.error("❌ Failed to complete goal:", err);
+    }
   };
 
   // ------------------------
-  // Clear both lists locally (safe)
+  // Clear all goals
   // ------------------------
-  const clearAllGoals = () => {
-    setGoals([]);
-    setCompletedGoals([]);
+  const clearAllGoals = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/goals", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      setGoals([]);
+      setCompletedGoals([]);
+    } catch (err) {
+      console.error("❌ Failed to clear all goals:", err);
+    }
   };
 
+  // ------------------------
   // Styles
+  // ------------------------
   const btnPrimary =
     "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold hover:bg-[#3b237f] transition";
-
   const btnComplete =
     "px-3 py-1 rounded bg-green-300 hover:bg-green-400 text-xs font-semibold";
-
   const btnRemove =
     "px-3 py-1 rounded bg-red-300 hover:bg-red-400 text-xs font-semibold";
 
@@ -102,7 +145,6 @@ function Goals() {
         >
           Back to Profile Dashboard
         </Link>
-
         <Link to="/">
           <img src="/smartfit_logo.png" className="h-12 md:h-16" />
         </Link>
@@ -123,11 +165,9 @@ function Goals() {
             placeholder="Enter new goal"
             className="w-full px-4 py-2 mb-4 border-2 border-gray-300 rounded-lg focus:border-[#462c9f]"
           />
-
           <button onClick={addGoal} className={`${btnPrimary} w-auto px-6`}>
             Add Goal
           </button>
-
           <button
             onClick={clearAllGoals}
             className="mt-3 px-4 py-2 rounded bg-red-200 hover:bg-red-300 text-sm font-semibold"
@@ -139,11 +179,10 @@ function Goals() {
         {/* Current Goals */}
         <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4">Current Goals</h2>
-
           {goals.length ? (
             goals.map((g) => (
               <div
-                key={g.id}
+                key={g._id}
                 className="flex justify-between items-center bg-white shadow-sm rounded-lg px-4 py-3 border"
               >
                 <span className="text-lg">{g.goal}</span>
@@ -151,7 +190,7 @@ function Goals() {
                   <button onClick={() => completeGoal(g)} className={btnComplete}>
                     ✓
                   </button>
-                  <button onClick={() => removeGoal(g.id)} className={btnRemove}>
+                  <button onClick={() => removeGoal(g._id)} className={btnRemove}>
                     ✕
                   </button>
                 </div>
@@ -165,11 +204,10 @@ function Goals() {
         {/* Completed Goals */}
         <section className="mb-6">
           <h2 className="text-2xl font-semibold mb-4">Completed Goals</h2>
-
           {completedGoals.length ? (
             completedGoals.map((g) => (
               <div
-                key={g.id}
+                key={g._id}
                 className="bg-gray-100 rounded-lg px-4 py-3 line-through border"
               >
                 {g.goal}
