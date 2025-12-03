@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
   const navigate = useNavigate()
 
   const handleLogIn = async (e) => {
@@ -24,8 +23,12 @@ function Login() {
         return
       }
 
+      // ✅ Store token and user in localStorage for Goals page
+      localStorage.setItem('token', data.data.token)
+      localStorage.setItem('user', JSON.stringify(data.data.user))
+
       alert("Login successful!")
-      navigate("/")
+      navigate("/") // Redirect to Home after login
     } catch (err) {
       console.error(err)
       alert("Something went wrong connecting to server.")
@@ -42,41 +45,40 @@ function Login() {
         <h2 className="text-center text-3xl font-semibold">Log In</h2>
 
         <form className="mt-4 space-y-4" onSubmit={handleLogIn}>
-          <div>
-            <input
-              onChange={(e) => setEmail(e.target.value)}
-              value={email}
-              type="email"
-              required
-              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
-              placeholder="Email"
-            />
-          </div>
+          <input
+            onChange={(e) => setEmail(e.target.value)}
+            value={email}
+            type="email"
+            required
+            placeholder="Email"
+            className="mt-1 block w-full px-3 py-2 border rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+          />
 
-          <div>
-            <input
-              onChange={(e) => setPassword(e.target.value)}
-              value={password}
-              type="password"
-              required
-              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
-              placeholder="Password"
-            />
-          </div>
+          <input
+            onChange={(e) => setPassword(e.target.value)}
+            value={password}
+            type="password"
+            required
+            placeholder="Password"
+            className="mt-1 block w-full px-3 py-2 border rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+          />
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium hover:bg-[#3b237f] hover:cursor-pointer transition-colors"
+            className="w-full py-2 px-4 bg-[#462c9f] text-white rounded-md 
+                       font-medium hover:bg-[#3b237f] transition-colors"
           >
             Log in
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-600">
-          Don’t have an account? Click{' '}
+          Don’t have an account?{" "}
           <Link to="/register" className="text-[#462c9f] hover:underline">
-            here to sign up
-          </Link>.
+            Sign up
+          </Link>
         </p>
       </div>
     </div>
