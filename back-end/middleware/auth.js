@@ -1,14 +1,8 @@
 import jwt from 'jsonwebtoken'
 
-/**
- * Authentication middleware to protect routes
- * Verifies JWT token from Authorization header
- */
 export const authenticate = (req, res, next) => {
   try {
-    // Get token from Authorization header (Bearer token)
     const authHeader = req.header('Authorization')
-    
     if (!authHeader) {
       return res.status(401).json({ 
         success: false,
@@ -16,9 +10,7 @@ export const authenticate = (req, res, next) => {
       })
     }
 
-    // Extract token (format: "Bearer <token>")
     const token = authHeader.replace('Bearer ', '')
-
     if (!token) {
       return res.status(401).json({ 
         success: false,
@@ -26,12 +18,14 @@ export const authenticate = (req, res, next) => {
       })
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    
-    // Add user info to request object
-    req.user = decoded.user
-    
+
+    // ✅ Read either decoded.user or top-level decoded
+    req.user = {
+      id: decoded.user?.id || decoded.id,
+      email: decoded.user?.email || decoded.email
+    }
+
     next()
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -48,11 +42,6 @@ export const authenticate = (req, res, next) => {
   }
 }
 
-/**
- * Generate JWT token for a user
- * @param {Object} user - User object with id
- * @returns {String} JWT token
- */
 export const generateToken = (user) => {
   const payload = {
     user: {
@@ -61,11 +50,7 @@ export const generateToken = (user) => {
     }
   }
 
-  return jwt.sign(
-    payload,
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE || '7d' }
-  )
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' })
 }
 
 export default { authenticate, generateToken }
