@@ -1,8 +1,14 @@
 import jwt from 'jsonwebtoken'
 
+/**
+ * Authentication middleware to protect routes
+ * Verifies JWT token from Authorization header
+ */
 export const authenticate = (req, res, next) => {
   try {
+    // Get token from Authorization header (format: "Bearer <token>")
     const authHeader = req.header('Authorization')
+    
     if (!authHeader) {
       return res.status(401).json({ 
         success: false,
@@ -10,21 +16,28 @@ export const authenticate = (req, res, next) => {
       })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    if (!token) {
+    // Ensure "Bearer " prefix
+    if (!authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ 
         success: false,
         message: 'Invalid token format. Authorization denied.' 
       })
     }
 
+    // Extract token
+    const token = authHeader.split(' ')[1]
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Token missing. Authorization denied.' 
+      })
+    }
+
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
-    // ✅ Read either decoded.user or top-level decoded
-    req.user = {
-      id: decoded.user?.id || decoded.id,
-      email: decoded.user?.email || decoded.email
-    }
+    // Support both payload formats: { user: {...} } OR { id, email }
+    req.user = decoded.user || { id: decoded.id, email: decoded.email }
 
     next()
   } catch (error) {
@@ -34,7 +47,7 @@ export const authenticate = (req, res, next) => {
         message: 'Token expired. Please login again.' 
       })
     }
-    
+
     res.status(401).json({ 
       success: false,
       message: 'Invalid token. Authorization denied.' 
@@ -42,6 +55,11 @@ export const authenticate = (req, res, next) => {
   }
 }
 
+/**
+ * Generate JWT token for a user
+ * @param {Object} user - User object with _id and email
+ * @returns {String} JWT token
+ */
 export const generateToken = (user) => {
   const payload = {
     user: {
@@ -50,7 +68,11 @@ export const generateToken = (user) => {
     }
   }
 
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' })
+  return jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+  )
 }
 
 export default { authenticate, generateToken }
