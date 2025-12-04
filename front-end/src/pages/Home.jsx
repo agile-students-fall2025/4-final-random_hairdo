@@ -1,33 +1,83 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { jwtDecode } from 'jwt-decode'
 
 function Home() {
   const [user, setUser] = useState(null)
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Get user from localStorage
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+  // Decode JWT to get user ID
+  const userFromToken = useMemo(() => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return null
+      
+      const decoded = jwtDecode(token)
+      // Token payload is { id, email }
+      return decoded
+    } catch (error) {
+      console.error('Error decoding token:', error)
+      localStorage.removeItem('token')
+      return null
     }
   }, [])
 
   useEffect(() => {
+    if (userFromToken) {
+      // Fetch user details to get name and other info
+      const fetchUserDetails = async () => {
+        try {
+          const token = localStorage.getItem('token')
+          const response = await fetch(`/api/users/${userFromToken.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success) {
+              setUser(data.data)
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user details:', error)
+        }
+      }
+      
+      fetchUserDetails()
+    }
+  }, [userFromToken])
+
+  useEffect(() => {
     const fetchActiveQueue = async () => {
-      if (!user?._id) {
+      if (!userFromToken?.id) {
         setLoading(false)
         return
       }
 
       try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`/api/queues/user/${user._id}?status=active`, {
+        const response = await fetch(`/api/queues/user/${userFromToken.id}?status=active`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         })
+        
+        if (response.status === 401) {
+          console.error('Unauthorized: Session expired')
+          localStorage.removeItem('token')
+          window.location.href = '/login'
+          return
+        }
+        
+        if (response.status === 403) {
+          console.error('Forbidden: Not authorized to view this resource')
+          setLoading(false)
+          return
+        }
+        
         const data = await response.json()
         
         if (data.success && data.data.length > 0) {
@@ -45,7 +95,7 @@ function Home() {
     // Poll for updates every 10 seconds
     const interval = setInterval(fetchActiveQueue, 10000)
     return () => clearInterval(interval)
-  }, [user])
+  }, [userFromToken])
 
   const formatWaitTime = (minutes) => {
     if (minutes === 0) return 'Next in line!'

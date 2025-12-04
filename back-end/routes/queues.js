@@ -1,5 +1,5 @@
 import express from 'express'
-import { body, validationResult } from 'express-validator'
+import { body, param, validationResult } from 'express-validator'
 import { Queue, Notification } from '../db.js'
 import { authenticate } from '../middleware/auth.js'
 
@@ -14,8 +14,9 @@ const router = express.Router()
  */
 router.post('/', [
   authenticate,
-  body('userId').notEmpty().withMessage('userId is required'),
-  body('zoneId').notEmpty().withMessage('zoneId is required')
+  body('userId').isMongoId().withMessage('Invalid userId format'),
+  body('zoneId').isMongoId().withMessage('Invalid zoneId format'),
+  body('facilityId').optional().isMongoId().withMessage('Invalid facilityId format')
 ], async (req, res) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
@@ -27,6 +28,14 @@ router.post('/', [
   
   try {
     const { userId, zoneId, facilityId, position, estimatedWait } = req.body
+    
+    // Verify userId matches authenticated user
+    if (userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to create queue for another user'
+      })
+    }
     
     // Check if user already has an active queue
     const existingQueue = await Queue.findOne({
@@ -96,7 +105,18 @@ router.post('/', [
  * Returns: Queue position, estimated wait time, status
  * Used by: Confirmed Queue page (for real-time updates)
  */
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid queue ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
     const queue = await Queue.findById(req.params.id)
       .populate('userId')
@@ -107,6 +127,14 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Queue entry not found'
+      })
+    }
+    
+    // Verify ownership
+    if (queue.userId._id.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view this queue entry'
       })
     }
     
@@ -136,8 +164,27 @@ router.get('/:id', authenticate, async (req, res) => {
  * Returns: List of active and past queue entries
  * Used by: Home page (Dashboard), History page
  */
-router.get('/user/:userId', authenticate, async (req, res) => {
+router.get('/user/:userId', [
+  authenticate,
+  param('userId').isMongoId().withMessage('Invalid userId format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
+    // Verify userId matches authenticated user
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view queues for another user'
+      })
+    }
+    
     const { status } = req.query
     
     let query = { userId: req.params.userId }
@@ -171,7 +218,18 @@ router.get('/user/:userId', authenticate, async (req, res) => {
  * Body: { position?, estimatedWait?, status? }
  * Used by: Queue page
  */
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid queue ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
     const queue = await Queue.findById(req.params.id)
     
@@ -179,6 +237,14 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Queue entry not found'
+      })
+    }
+    
+    // Verify ownership
+    if (queue.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this queue entry'
       })
     }
     
@@ -239,7 +305,18 @@ router.put('/:id', authenticate, async (req, res) => {
  * Leave a queue
  * Used by: Confirmed Queue page (cancel button)
  */
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid queue ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
     const queue = await Queue.findById(req.params.id)
     
@@ -258,7 +335,29 @@ router.delete('/:id', authenticate, async (req, res) => {
       })
     }
     
+    const leavingPosition = queue.position
+    const zoneId = queue.zoneId
+    const facilityId = queue.facilityId
+    
     await Queue.findByIdAndDelete(req.params.id)
+    
+    // Update positions for everyone behind in the same queue
+    try {
+      await Queue.updateMany(
+        {
+          zoneId: zoneId,
+          facilityId: facilityId,
+          status: 'active',
+          position: { $gt: leavingPosition }
+        },
+        {
+          $inc: { position: -1 }
+        }
+      )
+    } catch (updateError) {
+      console.error('Error updating queue positions:', updateError)
+      // Don't fail the delete if position update fails
+    }
     
     res.json({
       success: true,

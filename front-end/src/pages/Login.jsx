@@ -23,9 +23,8 @@ function Login() {
         return
       }
 
-      // Store token and user in localStorage
+      // Store only the token 
       localStorage.setItem('token', data.data.token)
-      localStorage.setItem('user', JSON.stringify(data.data.user))
 
       alert("Login successful!")
       navigate("/") // Redirect to Home after login

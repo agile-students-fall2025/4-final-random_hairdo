@@ -13,7 +13,6 @@ export default function Settings() {
   const onSignOut = () => {
     // clear any client-side session state
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     sessionStorage.clear();
     navigate("/login");
   };

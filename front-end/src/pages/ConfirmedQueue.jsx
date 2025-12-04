@@ -32,6 +32,18 @@ function ConfirmedQueue() {
         })
         const data = await response.json()
 
+        if (response.status === 401) {
+          alert('Your session has expired. Please log in again.')
+          window.location.href = '/login'
+          return
+        }
+        
+        if (response.status === 403) {
+          alert('You are not authorized to view this queue.')
+          window.location.href = '/'
+          return
+        }
+
         if (data.success) {
           setCurrentPosition(data.data.position)
           setEstimatedWait(data.data.estimatedWait)
@@ -76,6 +88,17 @@ function ConfirmedQueue() {
           'Authorization': `Bearer ${token}`
         }
       })
+
+      if (response.status === 401) {
+        alert('Your session has expired. Please log in again.')
+        window.location.href = '/login'
+        return
+      }
+      
+      if (response.status === 403) {
+        alert('You are not authorized to leave this queue.')
+        return
+      }
 
       const data = await response.json()
 

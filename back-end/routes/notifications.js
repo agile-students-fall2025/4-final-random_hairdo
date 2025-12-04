@@ -1,4 +1,5 @@
 import express from 'express'
+import { param, validationResult } from 'express-validator'
 import { Notification } from '../db.js'
 import { authenticate } from '../middleware/auth.js'
 
@@ -33,7 +34,18 @@ router.get('/', authenticate, async (req, res) => {
  * Get notifications for a specific user
  * Used by: Notifications page (Settings > Notifications)
  */
-router.get('/user/:userId', authenticate, async (req, res) => {
+router.get('/user/:userId', [
+  authenticate,
+  param('userId').isMongoId().withMessage('Invalid user ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
     const { userId } = req.params
     
@@ -60,7 +72,18 @@ router.get('/user/:userId', authenticate, async (req, res) => {
  * Mark a single notification as read
  * Front-end: called when the user clicks a notification box
  */
-router.put('/:id/read', authenticate, async (req, res) => {
+router.put('/:id/read', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid notification ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
   try {
     const notification = await Notification.findById(req.params.id)
     

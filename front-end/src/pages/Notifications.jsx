@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 export default function Notifications() {
   const [items, setItems] = useState([]);
@@ -7,13 +8,25 @@ export default function Notifications() {
   const [err, setErr] = useState("");
   const [userId, setUserId] = useState(null);
 
-  // Get user ID from localStorage
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
-    if (storedUser._id) {
-      setUserId(storedUser._id)
+  // Get user ID from JWT token
+  const userFromToken = useMemo(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    try {
+      const decoded = jwtDecode(token)
+      // Token payload is { id, email }
+      return decoded
+    } catch (error) {
+      console.error('Failed to decode token:', error)
+      return null
     }
   }, [])
+
+  useEffect(() => {
+    if (userFromToken?.id) {
+      setUserId(userFromToken.id)
+    }
+  }, [userFromToken])
 
   const btnDark =
     "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
@@ -67,7 +80,7 @@ export default function Notifications() {
   async function markOne(id) {
     try {
       await api(`/api/notifications/${id}/read`, { method: "PUT" });
-      setItems(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
+      setItems(prev => prev.map(n => (n._id === id ? { ...n, isRead: true } : n)));
     } catch (e) {
       alert(`Could not mark as read: ${e.message}`);
     }
@@ -78,7 +91,7 @@ export default function Notifications() {
     if (!unread.length) return;
     try {
       await Promise.all(
-        unread.map(n => api(`/api/notifications/${n.id}/read`, { method: "PUT" }))
+        unread.map(n => api(`/api/notifications/${n._id}/read`, { method: "PUT" }))
       );
       setItems(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (e) {
@@ -155,11 +168,11 @@ export default function Notifications() {
                       Unread
                     </div>
                     <ul className="mt-1">
-                      {unread.map((n, index) => (
+                      {unread.map((n) => (
                         <li
-                          key={index}
+                          key={n._id}
                           className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => markOne(n.id)}
+                          onClick={() => markOne(n._id)}
                           title="Mark as read"
                         >
                           <span
@@ -187,7 +200,7 @@ export default function Notifications() {
                   <ul className="mt-1">
                     {read.map((n) => (
                       <li
-                        key={n.id}
+                        key={n._id}
                         className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50"
                       >
                         <span

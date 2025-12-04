@@ -1,21 +1,44 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 
 // Shared button styles
 const btnPrimary = "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition"
 const btnOutline = "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#462c9f] text-base font-semibold text-center hover:bg-[#462c9f] hover:text-white transition"
 
 function Profile() {
-  const userId = 1 // TEMP until login PR merges
-
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Decode JWT to get user ID
+  const userFromToken = useMemo(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    try {
+      const decoded = jwtDecode(token)
+      // Token payload is { id, email }
+      return decoded
+    } catch (error) {
+      console.error('Failed to decode token:', error)
+      return null
+    }
+  }, [])
 
   // ------------------------
   // Load user data on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/users/${userId}`)
+    if (!userFromToken?.id) {
+      setLoading(false)
+      return
+    }
+
+    const token = localStorage.getItem('token')
+    fetch(`http://localhost:3000/api/users/${userFromToken.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) {
@@ -30,7 +53,7 @@ function Profile() {
         alert('Something went wrong connecting to server.')
         setLoading(false)
       })
-  }, [userId])
+  }, [userFromToken])
 
   // Show loading while fetching
   if (loading) {

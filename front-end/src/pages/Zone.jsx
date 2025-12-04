@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 
 // Shared button styles
 const btnPrimary = "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition hover:cursor-pointer"
@@ -48,15 +49,27 @@ function Zone() {
     setSelectedZone(zone)
   }
 
+  const userFromToken = useMemo(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    try {
+      const decoded = jwtDecode(token)
+      // Token payload is { id, email }
+      return decoded
+    } catch (error) {
+      console.error('Failed to decode token:', error)
+      return null
+    }
+  }, [])
+
   const handleConfirmQueue = async () => {
     if (!selectedZone) return
 
     try {
-      // Get token and user from localStorage
+      // Get token from localStorage
       const token = localStorage.getItem('token')
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
       
-      if (!token || !user._id) {
+      if (!token || !userFromToken?.id) {
         alert('Please log in to join a queue')
         return
       }
@@ -69,7 +82,7 @@ function Zone() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          userId: user._id,
+          userId: userFromToken.id,
           zoneId: selectedZone._id,
           facilityId: facilityId,
           position: selectedZone.queueLength + 1,
