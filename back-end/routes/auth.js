@@ -43,7 +43,7 @@ router.post("/login", async (req, res) => {
     }
 
     // Find user & select password explicitly
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email: req.body.email }).select('+password')
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
