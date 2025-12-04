@@ -1,12 +1,13 @@
+// routes/settings.js
 import express from 'express'
 import {
-  users,
-  queues,
-  goals,
-  history,
-  notifications,
-  supportIssues
-} from '../utils/mockData.js'
+  User,
+  Queue,
+  Goal,
+  History,
+  Notification,
+  SupportIssue
+} from '../db.js'
 
 const router = express.Router()
 
@@ -20,56 +21,85 @@ router.get('/', (req, res) => {
 
 /**
  * DELETE /api/settings/account/:userId
- * Deletes a user account and associated data from mock storage.
+ * Deletes a user account and associated data from MongoDB.
  * Used by: Settings page → "Delete Account" button
  */
-router.delete('/account/:userId', (req, res) => {
-  const userId = parseInt(req.params.userId)
+router.delete('/account/:userId', async (req, res) => {
+  const { userId } = req.params
 
-  // 1. Remove user
-  const userIndex = users.findIndex(u => u.id === userId)
-  if (userIndex === -1) {
-    return res.status(404).json({
+  try {
+    // 1. Find the user first (so we can return their info)
+    const user = await User.findById(userId)
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      })
+    }
+
+    // Copy what we want to return before deletion
+    const deletedUser = {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name
+    }
+
+    // 2. Delete user and all related records
+    const [
+      userResult,
+      queueResult,
+      goalResult,
+      historyResult,
+      notificationResult,
+      supportIssueResult
+    ] = await Promise.all([
+      User.deleteOne({ _id: userId }),
+      Queue.deleteMany({ userId }),
+      Goal.deleteMany({ userId }),
+      History.deleteMany({ userId }),
+      Notification.deleteMany({ userId }),
+      SupportIssue.deleteMany({ userId })
+    ])
+
+    // userResult.deletedCount should be 1 if deletion succeeded
+    if (userResult.deletedCount === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete user'
+      })
+    }
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully',
+      data: {
+        user: deletedUser,
+        removedRecords: {
+          queues: queueResult.deletedCount || 0,
+          goals: goalResult.deletedCount || 0,
+          history: historyResult.deletedCount || 0,
+          notifications: notificationResult.deletedCount || 0,
+          supportIssues: supportIssueResult.deletedCount || 0
+        }
+      }
+    })
+  } catch (error) {
+    // Invalid ObjectId (e.g. random string) → 400
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid userId'
+      })
+    }
+
+    console.error('Error deleting account:', error)
+    res.status(500).json({
       success: false,
-      error: 'User not found'
+      error: 'Server error',
+      message: error.message
     })
   }
-
-  const deletedUser = users[userIndex]
-  users.splice(userIndex, 1)
-
-  // Helper to remove items with matching userId from an array
-  const deleteByUserId = (arr) => {
-    let removed = 0
-    for (let i = arr.length - 1; i >= 0; i--) {
-      if (arr[i].userId === userId) {
-        arr.splice(i, 1)
-        removed++
-      }
-    }
-    return removed
-  }
-
-  const removedQueues = deleteByUserId(queues)
-  const removedGoals = deleteByUserId(goals)
-  const removedHistory = deleteByUserId(history)
-  const removedNotifications = deleteByUserId(notifications)
-  const removedSupportIssues = deleteByUserId(supportIssues)
-
-  res.json({
-    success: true,
-    message: 'Account deleted successfully',
-    data: {
-      user: { id: deletedUser.id, email: deletedUser.email, name: deletedUser.name },
-      removedRecords: {
-        queues: removedQueues,
-        goals: removedGoals,
-        history: removedHistory,
-        notifications: removedNotifications,
-        supportIssues: removedSupportIssues
-      }
-    }
-  })
 })
 
 export default router

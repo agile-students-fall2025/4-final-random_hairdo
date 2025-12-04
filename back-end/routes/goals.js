@@ -1,116 +1,136 @@
-import express from "express";
-import { goals, getNextId } from "../utils/mockData.js";
+import express from 'express'
+import { Goal } from '../db.js'
+import { authenticate } from '../middleware/auth.js'
 
-const router = express.Router();
+const router = express.Router()
 
-/**
- * GET /api/goals/user/:userId
- * Returns all goals for a specific user
- */
-router.get("/user/:userId", (req, res) => {
-  const { userId } = req.params;
+// ----------------------
+// CREATE GOAL
+// POST /api/goals
+// ----------------------
+router.post('/', authenticate, async (req, res) => {
+  try {
+    console.log('CREATE GOAL - req.user:', req.user)
+    console.log('CREATE GOAL - req.body:', req.body)
 
-  if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: "User ID is required"
-    });
+    const { goal } = req.body
+    if (!goal) {
+      return res.status(400).json({ error: 'Goal title is required' })
+    }
+
+    // Prevent duplicate goals for the same user
+    const existingGoal = await Goal.findOne({ userId: req.user.id, goal })
+    if (existingGoal) {
+      return res.status(400).json({ error: 'Goal already exists' })
+    }
+
+    const newGoal = await Goal.create({
+      userId: req.user.id,
+      goal,
+      progress: 0, // always initialize progress
+    })
+
+    console.log('CREATE GOAL - newGoal:', newGoal)
+    res.status(201).json(newGoal)
+  } catch (err) {
+    console.error('Create Goal Error:', err)
+    res.status(500).json({ error: 'Failed to create goal' })
   }
+})
 
-  const userGoals = goals.filter(g => g.userId == userId);
+// ----------------------
+// GET ALL USER GOALS
+// GET /api/goals
+// ----------------------
+router.get('/', authenticate, async (req, res) => {
+  try {
+    console.log('FETCH GOALS - req.user.id:', req.user.id)
 
-  return res.json({
-    success: true,
-    count: userGoals.length,
-    data: userGoals
-  });
-});
+    const goals = await Goal.find({ userId: req.user.id }).sort({ createdAt: -1 })
+    console.log('FETCH GOALS - goals:', goals)
 
-/**
- * POST /api/goals
- * Creates a new goal
- */
-router.post("/", (req, res) => {
-  const { userId, goal, progress = 0 } = req.body;
-
-  if (!userId || !goal) {
-    return res.status(400).json({
-      success: false,
-      message: "userId and goal are required fields"
-    });
+    res.json(goals)
+  } catch (err) {
+    console.error('Fetch Goals Error:', err)
+    res.status(500).json({ error: 'Failed to fetch goals' })
   }
+})
 
-  const newGoal = {
-    id: getNextId(goals),
-    userId,
-    goal,
-    progress
-  };
+// ----------------------
+// UPDATE A GOAL
+// PUT /api/goals/:id
+// ----------------------
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    console.log('UPDATE GOAL - req.params.id:', req.params.id)
+    console.log('UPDATE GOAL - req.user.id:', req.user.id)
+    console.log('UPDATE GOAL - updates:', req.body)
 
-  goals.push(newGoal);
+    const updates = req.body
 
-  return res.status(201).json({
-    success: true,
-    message: "Goal created successfully",
-    data: newGoal
-  });
-});
+    const updatedGoal = await Goal.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      updates,
+      { new: true }
+    )
 
-/**
- * PUT /api/goals/:id
- * Updates the progress of a goal
- */
-router.put("/:id", (req, res) => {
-  const { id } = req.params;
-  const { progress } = req.body;
+    if (!updatedGoal) {
+      console.log('UPDATE GOAL - Goal not found or unauthorized')
+      return res.status(404).json({ error: 'Goal not found or unauthorized' })
+    }
 
-  if (progress === undefined) {
-    return res.status(400).json({
-      success: false,
-      message: "Progress value is required"
-    });
+    console.log('UPDATE GOAL - updatedGoal:', updatedGoal)
+    res.json(updatedGoal)
+  } catch (err) {
+    console.error('Update Goal Error:', err)
+    res.status(500).json({ error: 'Failed to update goal' })
   }
+})
 
-  const goal = goals.find(g => g.id == id);
+// ----------------------
+// DELETE A GOAL
+// DELETE /api/goals/:id
+// ----------------------
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const deletedGoal = await Goal.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    })
 
-  if (!goal) {
-    return res.status(404).json({
-      success: false,
-      message: "Goal not found"
-    });
+    console.log('DELETE GOAL - deletedGoal:', deletedGoal)
+
+    if (!deletedGoal) {
+      return res.status(404).json({ error: 'Goal not found or unauthorized' })
+    }
+
+    // Return the updated list after deletion
+    const remainingGoals = await Goal.find({ userId: req.user.id }).sort({ createdAt: -1 })
+    console.log('DELETE GOAL - remainingGoals in DB:', remainingGoals)
+
+    res.json({ 
+      message: 'Goal deleted successfully', 
+      remainingGoals 
+    })
+  } catch (err) {
+    console.error('Delete Goal Error:', err)
+    res.status(500).json({ error: 'Failed to delete goal' })
   }
+})
 
-  goal.progress = progress;
-
-  return res.json({
-    success: true,
-    message: "Goal updated successfully",
-    data: goal
-  });
-});
-
-/**
- * DELETE /api/goals/:id
- * Deletes a goal
- */
-router.delete("/:id", (req, res) => {
-  const { id } = req.params;
-
-  const index = goals.findIndex(g => g.id == id);
-
-  if (index === -1) {
-    return res.status(404).json({
-      success: false,
-      message: "Goal not found"
-    });
+// ----------------------
+// CLEAR ALL GOALS
+// DELETE /api/goals
+// ----------------------
+router.delete('/', authenticate, async (req, res) => {
+  try {
+    await Goal.deleteMany({ userId: req.user.id })
+    console.log('CLEAR ALL GOALS - userId:', req.user.id)
+    res.json({ message: 'All goals cleared successfully', remainingGoals: [] })
+  } catch (err) {
+    console.error('Clear All Goals Error:', err)
+    res.status(500).json({ error: 'Failed to clear goals' })
   }
+})
 
-  goals.splice(index, 1);
-
-  return res.json({
-    success: true,
-    message: "Goal deleted successfully"
-  });
-});
-
-export default router;
+export default router
