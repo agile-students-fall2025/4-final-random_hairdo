@@ -1,11 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 export default function Notifications() {
-  const USER_ID = 1; // swap when you have auth
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [userId, setUserId] = useState(null);
+
+  // Get user ID from JWT token
+  const userFromToken = useMemo(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    try {
+      const decoded = jwtDecode(token)
+      // Token payload is { id, email }
+      return decoded
+    } catch (error) {
+      console.error('Failed to decode token:', error)
+      return null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (userFromToken?.id) {
+      setUserId(userFromToken.id)
+    }
+  }, [userFromToken])
 
   const btnDark =
     "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
@@ -16,9 +37,15 @@ export default function Notifications() {
 
   // helper
   async function api(path, opts = {}) {
+    const token = localStorage.getItem('token')
+    const headers = {
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    }
+    
     const res = await fetch(path, {
       method: opts.method || "GET",
-      headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
@@ -30,10 +57,12 @@ export default function Notifications() {
 
   // initial load
   useEffect(() => {
+    if (!userId) return;
+    
     (async () => {
       try {
         setLoading(true);
-        const { data } = await api(`/api/notifications/user/${USER_ID}`);
+        const { data } = await api(`/api/notifications/user/${userId}`);
         // backend uses isRead; normalize to isRead in state
         setItems(data);
       } catch (e) {
@@ -42,7 +71,7 @@ export default function Notifications() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [userId]);
 
   const unread = useMemo(() => items.filter(n => !n.isRead), [items]);
   const read = useMemo(() => items.filter(n => n.isRead), [items]);
@@ -51,7 +80,7 @@ export default function Notifications() {
   async function markOne(id) {
     try {
       await api(`/api/notifications/${id}/read`, { method: "PUT" });
-      setItems(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
+      setItems(prev => prev.map(n => (n._id === id ? { ...n, isRead: true } : n)));
     } catch (e) {
       alert(`Could not mark as read: ${e.message}`);
     }
@@ -62,7 +91,7 @@ export default function Notifications() {
     if (!unread.length) return;
     try {
       await Promise.all(
-        unread.map(n => api(`/api/notifications/${n.id}/read`, { method: "PUT" }))
+        unread.map(n => api(`/api/notifications/${n._id}/read`, { method: "PUT" }))
       );
       setItems(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (e) {
@@ -141,9 +170,9 @@ export default function Notifications() {
                     <ul className="mt-1">
                       {unread.map((n) => (
                         <li
-                          key={n.id}
+                          key={n._id}
                           className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => markOne(n.id)}
+                          onClick={() => markOne(n._id)}
                           title="Mark as read"
                         >
                           <span
@@ -171,7 +200,7 @@ export default function Notifications() {
                   <ul className="mt-1">
                     {read.map((n) => (
                       <li
-                        key={n.id}
+                        key={n._id}
                         className="px-3 py-3 flex items-start gap-3 hover:bg-gray-50"
                       >
                         <span

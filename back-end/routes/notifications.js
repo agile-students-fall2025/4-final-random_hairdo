@@ -1,5 +1,7 @@
 import express from 'express'
-import { notifications, findByUserId } from '../utils/mockData.js'
+import { param, validationResult } from 'express-validator'
+import { Notification } from '../db.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -7,12 +9,24 @@ const router = express.Router()
  * GET /api/notifications
  * Get all notifications (admin / debugging)
  */
-router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    data: notifications,
-    message: 'All notifications retrieved successfully'
-  })
+router.get('/', authenticate, async (req, res) => {
+  try {
+    const allNotifications = await Notification.find()
+      .populate('userId')
+      .sort({ createdAt: -1 })
+    
+    res.json({
+      success: true,
+      data: allNotifications,
+      message: 'All notifications retrieved successfully'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
 })
 
 /**
@@ -20,19 +34,37 @@ router.get('/', (req, res) => {
  * Get notifications for a specific user
  * Used by: Notifications page (Settings > Notifications)
  */
-router.get('/user/:userId', (req, res) => {
-  const { userId } = req.params
-
-  const userNotifications = findByUserId(notifications, userId)
-
-  // Optional: sort newest first
-  userNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-  res.json({
-    success: true,
-    data: userNotifications,
-    message: 'User notifications retrieved successfully'
-  })
+router.get('/user/:userId', [
+  authenticate,
+  param('userId').isMongoId().withMessage('Invalid user ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
+  try {
+    const { userId } = req.params
+    
+    const userNotifications = await Notification.find({ userId })
+      .populate('userId')
+      .sort({ createdAt: -1 })
+    
+    res.json({
+      success: true,
+      data: userNotifications,
+      message: 'User notifications retrieved successfully'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
 })
 
 /**
@@ -40,25 +72,50 @@ router.get('/user/:userId', (req, res) => {
  * Mark a single notification as read
  * Front-end: called when the user clicks a notification box
  */
-router.put('/:id/read', (req, res) => {
-  const notificationId = parseInt(req.params.id)
-  const notification = notifications.find(n => n.id === notificationId)
-
-  if (!notification) {
-    return res.status(404).json({
+router.put('/:id/read', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid notification ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
       success: false,
-      error: 'Notification not found'
+      errors: errors.array()
     })
   }
-
-  // Mark as read (for the UI: switch from highlighted to gray)
-  notification.isRead = true
-
-  res.json({
-    success: true,
-    data: notification,
-    message: 'Notification marked as read'
-  })
+  
+  try {
+    const notification = await Notification.findById(req.params.id)
+    
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
+      })
+    }
+    
+    notification.isRead = true
+    await notification.save()
+    
+    res.json({
+      success: true,
+      data: notification,
+      message: 'Notification marked as read'
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
+      })
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
 })
 
 export default router
