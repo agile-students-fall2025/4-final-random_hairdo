@@ -1,3 +1,4 @@
+//mockdata
 export const users = [
   {
     id: 1,
@@ -92,7 +93,7 @@ export const zones = [
     capacity: 30,
     currentOccupancy: 22,
     queueLength: 5,
-    averageWaitTime: 15, // minutes
+    averageWaitTime: 15,
     status: 'busy',
     createdAt: '2023-01-01T00:00:00Z'
   },
@@ -155,9 +156,44 @@ export const zones = [
     averageWaitTime: 25,
     status: 'busy',
     createdAt: '2023-03-01T00:00:00Z'
+  },
+  {
+    id: 7,
+    facilityId: 4,
+    name: 'Cardio Zone',
+    equipment: ['Treadmills', 'Ellipticals', 'Spin Bikes'],
+    capacity: 25,
+    currentOccupancy: 15,
+    queueLength: 2,
+    averageWaitTime: 8,
+    status: 'available',
+    createdAt: '2023-04-01T00:00:00Z'
+  },
+  {
+    id: 8,
+    facilityId: 4,
+    name: 'Basketball Court',
+    equipment: ['Basketball Hoops', 'Basketballs'],
+    capacity: 10,
+    currentOccupancy: 6,
+    queueLength: 0,
+    averageWaitTime: 0,
+    status: 'available',
+    createdAt: '2023-04-01T00:00:00Z'
+  },
+  {
+    id: 9,
+    facilityId: 4,
+    name: 'Fitness Center',
+    equipment: ['Weight Machines', 'Free Weights', 'Dumbbells'],
+    capacity: 30,
+    currentOccupancy: 25,
+    queueLength: 4,
+    averageWaitTime: 15,
+    status: 'busy',
+    createdAt: '2023-04-01T00:00:00Z'
   }
 ]
-
 export const queues = [
   {
     id: 1,
@@ -493,11 +529,12 @@ export const supportIssues = [
   }
 ]
 
+// Helper functions
 export const getNextId = (array) => {
   if (array.length === 0) return 1
   return Math.max(...array.map(item => item.id)) + 1
-
 }
+
 export const findById = (array, id) => {
   return array.find(item => item.id === parseInt(id))
 }
@@ -510,6 +547,7 @@ export const findByFacilityId = (array, facilityId) => {
   return array.filter(item => item.facilityId === parseInt(facilityId))
 }
 
+// Default export (keep this for backward compatibility)
 export default {
   users,
   facilities,
