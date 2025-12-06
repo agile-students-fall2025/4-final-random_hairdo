@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 
 // Shared button styles
 const btnPrimary =
@@ -9,42 +10,75 @@ const btnOutline =
 
 function EditProfile() {
   const navigate = useNavigate()
-  const userId = 1 // TEMP until login PR merges
+  
+  // Get userId from JWT token
+  const token = localStorage.getItem('token')
+  const decoded = token ? jwtDecode(token) : null
+  const userId = decoded?.user?.id
   
   // State for form inputs
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    goals: []
+    focusTags: []  // Changed from goals to focusTags
   })
 
   const [loading, setLoading] = useState(true)
-  const [goalInput, setGoalInput] = useState('')
+  const [tagInput, setTagInput] = useState('')  // Changed from goalInput
+
+  // Auth guard
+  useEffect(() => {
+    if (!token || !userId) {
+      alert('Please log in to edit your profile')
+      navigate('/login')
+    }
+  }, [token, userId, navigate])
 
   // ------------------------
   // Load user data on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/users/${userId}`)
-      .then((res) => res.json())
+    if (!userId) return
+
+    // Using relative URL
+    fetch(`/api/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then((res) => {
+        // Handle 401 errors
+        if (res.status === 401) {
+          localStorage.clear()
+          alert('Your session has expired. Please log in again.')
+          navigate('/login')
+          throw new Error('Unauthorized')
+        }
+        return res.json()
+      })
       .then((data) => {
-        if (!data.success) return
+        if (!data.success) {
+          alert('Failed to load profile')
+          return
+        }
         
         // Populate form with current user data
         const user = data.data
         setFormData({
           name: user.name || '',
           email: user.email || '',
-          goals: user.goals || []
+          focusTags: user.focusTags || []  // Changed from goals
         })
         setLoading(false)
       })
       .catch((err) => {
         console.error(err)
-        alert('Failed to load profile')
+        if (err.message !== 'Unauthorized') {
+          alert('Failed to load profile')
+        }
         setLoading(false)
       })
-  }, [userId])
+  }, [userId, token, navigate])
 
   // Handle input changes
   const handleChange = (e) => {
@@ -55,22 +89,28 @@ function EditProfile() {
     }))
   }
 
-  // Add goal to list
-  const addGoal = () => {
-    if (!goalInput.trim()) return
+  // Add focus tag to list (max 3)
+  const addTag = () => {
+    if (!tagInput.trim()) return
+    
+    // Check if already at max
+    if (formData.focusTags.length >= 3) {
+      alert('Maximum 3 focus tags allowed')
+      return
+    }
     
     setFormData(prevData => ({
       ...prevData,
-      goals: [...prevData.goals, goalInput.trim()]
+      focusTags: [...prevData.focusTags, tagInput.trim()]
     }))
-    setGoalInput('')
+    setTagInput('')
   }
 
-  // Remove goal from list
-  const removeGoal = (index) => {
+  // Remove focus tag from list
+  const removeTag = (index) => {
     setFormData(prevData => ({
       ...prevData,
-      goals: prevData.goals.filter((_, i) => i !== index)
+      focusTags: prevData.focusTags.filter((_, i) => i !== index)
     }))
   }
 
@@ -79,11 +119,23 @@ function EditProfile() {
     e.preventDefault()
     
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}`, {
+      // Using relative URL 
+      const res = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       })
+      
+      // Handle 401 errors on update
+      if (res.status === 401) {
+        localStorage.clear()
+        alert('Your session has expired. Please log in again.')
+        navigate('/login')
+        return
+      }
       
       const data = await res.json()
       
@@ -171,24 +223,27 @@ function EditProfile() {
             />
           </div>
 
-          {/* Goals Section */}
+          {/* Focus Tags Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fitness Goals
+              Current Focus (Max 3)
             </label>
+            <p className="text-xs text-gray-500 mb-2">
+              What exercise, machine, or body part are you focusing on?
+            </p>
             
-            {/* Current Goals */}
-            {formData.goals.length > 0 && (
+            {/* Current Tags */}
+            {formData.focusTags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {formData.goals.map((goal, index) => (
+                {formData.focusTags.map((tag, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-1 px-3 py-1 bg-[#462c9f] text-white text-sm rounded-full"
                   >
-                    <span>{goal}</span>
+                    <span>{tag}</span>
                     <button
                       type="button"
-                      onClick={() => removeGoal(index)}
+                      onClick={() => removeTag(index)}
                       className="ml-1 text-white hover:text-red-200"
                     >
                       ✕
@@ -198,26 +253,28 @@ function EditProfile() {
               </div>
             )}
 
-            {/* Add Goal Input */}
+            {/* Add Tag Input */}
             <div className="flex gap-2">
               <input
                 type="text"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addGoal())}
-                placeholder="Add a goal (e.g., Weight Loss)"
-                className="flex-1 px-4 py-2 border-2 border-gray-300 bg-white text-[#282f3e] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                placeholder="e.g., Chest, Treadmill, Squats"
+                disabled={formData.focusTags.length >= 3}
+                className="flex-1 px-4 py-2 border-2 border-gray-300 bg-white text-[#282f3e] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#462c9f] disabled:bg-gray-100"
               />
               <button
                 type="button"
-                onClick={addGoal}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold"
+                onClick={addTag}
+                disabled={formData.focusTags.length >= 3}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Press Enter or click Add to add goals
+              {formData.focusTags.length}/3 tags • Press Enter or click Add
             </p>
           </div>
 

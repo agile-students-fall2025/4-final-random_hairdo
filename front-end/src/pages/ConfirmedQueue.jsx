@@ -6,7 +6,7 @@ const btnOutline = "w-1/2 px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#
 
 function ConfirmedQueue() {
   const location = useLocation()
-  const { zone, position: initialPosition, queueId, facilityId, estimatedWait: initialWait } = location.state || { 
+  const { zone, position: initialPosition, queueId, estimatedWait: initialWait } = location.state || { 
     zone: { name: 'Unknown Zone', averageWaitTime: 0 }, 
     position: 0,
     queueId: null,
@@ -24,8 +24,25 @@ function ConfirmedQueue() {
 
     const fetchQueueStatus = async () => {
       try {
-        const response = await fetch(`/api/queues/${queueId}`)
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/queues/${queueId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         const data = await response.json()
+
+        if (response.status === 401) {
+          alert('Your session has expired. Please log in again.')
+          window.location.href = '/login'
+          return
+        }
+        
+        if (response.status === 403) {
+          alert('You are not authorized to view this queue.')
+          window.location.href = '/'
+          return
+        }
 
         if (data.success) {
           setCurrentPosition(data.data.position)
@@ -64,9 +81,24 @@ function ConfirmedQueue() {
     if (!confirm('Are you sure you want to leave the queue?')) return
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`/api/queues/${queueId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
+
+      if (response.status === 401) {
+        alert('Your session has expired. Please log in again.')
+        window.location.href = '/login'
+        return
+      }
+      
+      if (response.status === 403) {
+        alert('You are not authorized to leave this queue.')
+        return
+      }
 
       const data = await response.json()
 

@@ -1,19 +1,49 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 
 function History() {
-  const userId = 1 // TEMP until login PR merges
+  const navigate = useNavigate()
+  
+  // Get userId from JWT token
+  const token = localStorage.getItem('token')
+  const decoded = token ? jwtDecode(token) : null
+  const userId = decoded?.user?.id
 
   const [workoutHistory, setWorkoutHistory] = useState([])
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // Auth guard
+  useEffect(() => {
+    if (!token || !userId) {
+      alert('Please log in to view your workout history')
+      navigate('/login')
+    }
+  }, [token, userId, navigate])
+
   // ------------------------
   // Load workout history on page load
   // ------------------------
   useEffect(() => {
-    fetch(`http://localhost:3000/api/history/user/${userId}`)
-      .then((res) => res.json())
+    if (!userId) return
+
+    //Using relative URL
+    fetch(`/api/history/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then((res) => {
+        // Handle 401 errors
+        if (res.status === 401) {
+          localStorage.clear()
+          alert('Your session has expired. Please log in again.')
+          navigate('/login')
+          throw new Error('Unauthorized')
+        }
+        return res.json()
+      })
       .then((data) => {
         if (!data.success) {
           alert('Failed to load workout history')
@@ -25,10 +55,12 @@ function History() {
       })
       .catch((err) => {
         console.error(err)
-        alert('Something went wrong connecting to server.')
+        if (err.message !== 'Unauthorized') {
+          alert('Something went wrong connecting to server.')
+        }
         setLoading(false)
       })
-  }, [userId])
+  }, [userId, token, navigate])
 
   // Show loading while fetching
   if (loading) {
@@ -98,7 +130,7 @@ function History() {
           <div className="space-y-4">
             {workoutHistory.map((workout) => (
               <div 
-                key={workout.id} 
+                key={workout._id}
                 className="bg-white border-2 border-black p-4 rounded-lg shadow-sm"
               >
                 {/* Workout Header */}
@@ -115,7 +147,7 @@ function History() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="font-medium text-[#282f3e]">Location:</span>
-                    <p className="text-gray-700">{workout.gym}</p>
+                    <p className="text-gray-700">{workout.zoneName}</p>
                   </div>
                   <div>
                     <span className="font-medium text-[#282f3e]">Duration:</span>
