@@ -57,10 +57,21 @@ function Register() {
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || data.success === false) {
-        setEmailError(data.error || data.message || "Registration failed.");
-        return;
+     if (!res.ok || data.success === false) {
+      // Check message first (backend sends it there)
+      const errorMsg = data.message || data.error || "Registration failed.";
+    
+      // Route error to appropriate field
+      if (errorMsg.toLowerCase().includes('password')) {
+        setPasswordError(errorMsg);
+      } else if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('exists')) {
+        setEmailError(errorMsg);
+      } else {
+        setServerError(errorMsg);
       }
+      return;
+    }
+
 
       // If backend sends token + user, store them (optional but nice)
       if (data.token) {
