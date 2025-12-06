@@ -3,27 +3,10 @@
 // ============================================
 import express from "express"
 import jwt from "jsonwebtoken"
-import rateLimit from "express-rate-limit"
 import { User } from "../db.js"
 import { body, validationResult } from "express-validator"
 
 const router = express.Router()
-
-// ============================================
-// RATE LIMITING (Security)
-// ============================================
-// Limit auth attempts to prevent brute force attacks
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window per IP
-  message: {
-    success: false,
-    error: 'Too many attempts',
-    message: 'Too many authentication attempts. Please try again in 15 minutes.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-})
 
 // ============================================
 // REGISTER NEW USER
@@ -36,7 +19,6 @@ const authLimiter = rateLimit({
  * Used by: Register page
  */
 router.post("/register", 
-  authLimiter,
   [
     body('name')
       .trim()
@@ -151,7 +133,6 @@ router.post("/register",
  * Used by: Login page
  */
 router.post("/login",
-  authLimiter,
   [
     body('email')
       .isEmail()
