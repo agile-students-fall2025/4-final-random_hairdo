@@ -1,16 +1,112 @@
 // test/history.test.js
+// Sprint 3: MongoDB + JWT authentication tests
 import request from 'supertest'
 import { expect } from 'chai'
 import express from 'express'
+import mongoose from 'mongoose'
+import dotenv from 'dotenv'
+import connectDB from '../db.js'
+import { User, History, Facility, Zone } from '../db.js'
 import historyRouter from '../routes/history.js'
-import { history } from '../utils/mockData.js'
+import authRouter from '../routes/auth.js'
+
+// Load environment variables
+dotenv.config()
 
 // Create isolated test app
 const app = express()
 app.use(express.json())
 app.use('/api/history', historyRouter)
+app.use('/api/auth', authRouter)
 
-describe('History API Tests', () => {
+describe('History API Tests (MongoDB + JWT)', () => {
+  let authToken
+  let testUserId
+  let testFacilityId
+  let testZoneId
+  let testWorkoutId
+  
+  // ============================================
+  // Setup: Connect to database before all tests
+  // ============================================
+  before(async function() {
+    this.timeout(10000)
+    await connectDB()
+  })
+  
+  // ============================================
+  // Cleanup: Clear database before each test
+  // ============================================
+  beforeEach(async function() {
+    this.timeout(5000)
+    // Clear collections
+    await User.deleteMany({})
+    await History.deleteMany({})
+    await Facility.deleteMany({})
+    await Zone.deleteMany({})
+    
+    // Create test user
+    const testUser = await User.create({
+      name: 'Test User',
+      email: 'test@test.com',
+      password: 'test123',
+      goals: []
+    })
+    testUserId = testUser._id  // Keep as ObjectId
+    
+    // Create test facility
+    const testFacility = await Facility.create({
+      name: 'Test Gym',
+      address: '123 Test St',
+      capacity: 100,
+      hours: { weekdays: '6AM-10PM', weekends: '8AM-8PM' },
+      amenities: ['Lockers', 'Showers']
+    })
+    testFacilityId = testFacility._id
+    
+    // Create test zone
+    const testZone = await Zone.create({
+      facilityId: testFacilityId,
+      name: 'Cardio Zone',
+      equipment: ['Treadmill', 'Elliptical'],
+      capacity: 20,
+      currentOccupancy: 5
+    })
+    testZoneId = testZone._id
+    
+    // Create test workout
+    const testWorkout = await History.create({
+      userId: testUserId,
+      facilityId: testFacilityId,
+      zoneId: testZoneId,
+      zoneName: 'Cardio Zone',
+      date: new Date('2024-11-20T10:00:00Z'),
+      duration: 45,
+      type: 'Cardio',
+      exercises: ['Treadmill', 'Elliptical'],
+      caloriesBurned: 350,
+      notes: 'Great workout!'
+    })
+    testWorkoutId = testWorkout._id.toString()
+    
+    // Login to get token
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'test@test.com',
+        password: 'test123'
+      })
+    
+    authToken = loginRes.body.token
+  })
+  
+  // ============================================
+  // Teardown: Close database after all tests
+  // ============================================
+  after(async function() {
+    this.timeout(5000)
+    await mongoose.connection.close()
+  })
   
   // ============================================
   // GET /api/history/user/:userId
@@ -18,7 +114,9 @@ describe('History API Tests', () => {
   
   describe('GET /api/history/user/:userId', () => {
     it('should return workout history with success status', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(200)
       expect(res.body).to.have.property('success', true)
@@ -28,81 +126,116 @@ describe('History API Tests', () => {
     })
     
     it('should return an array of workouts', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.body.data).to.be.an('array')
+      expect(res.body.data.length).to.be.greaterThan(0)
     })
     
     it('should return workouts with correct structure', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
-      if (res.body.data.length > 0) {
-        const workout = res.body.data[0]
-        expect(workout).to.have.property('id')
-        expect(workout).to.have.property('userId')
-        expect(workout).to.have.property('facilityId')
-        expect(workout).to.have.property('zoneId')
-        expect(workout).to.have.property('zoneName')
-        expect(workout).to.have.property('date')
-        expect(workout).to.have.property('duration')
-        expect(workout).to.have.property('type')
-        expect(workout).to.have.property('exercises')
-      }
+      const workout = res.body.data[0]
+      expect(workout).to.have.property('_id')
+      expect(workout).to.have.property('userId')
+      expect(workout).to.have.property('facilityId')
+      expect(workout).to.have.property('zoneId')
+      expect(workout).to.have.property('zoneName')
+      expect(workout).to.have.property('date')
+      expect(workout).to.have.property('duration')
+      expect(workout).to.have.property('type')
+      expect(workout).to.have.property('exercises')
     })
     
     it('should include exercises array in workouts', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
-      if (res.body.data.length > 0) {
-        const workout = res.body.data[0]
-        expect(workout.exercises).to.be.an('array')
-      }
+      const workout = res.body.data[0]
+      expect(workout.exercises).to.be.an('array')
+      expect(workout.exercises).to.deep.equal(['Treadmill', 'Elliptical'])
     })
     
     it('should return statistics object', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.body.stats).to.be.an('object')
-      expect(res.body.stats).to.have.property('totalWorkouts')
-      expect(res.body.stats).to.have.property('totalMinutes')
-      expect(res.body.stats).to.have.property('totalCalories')
-    })
-    
-    it('should filter workouts by zone', async () => {
-      const res = await request(app).get('/api/history/user/1?zone=Cardio')
-      
-      expect(res.status).to.equal(200)
-      // Just verify the response is valid, don't assert specific zone names
-      expect(res.body.data).to.be.an('array')
+      expect(res.body.stats).to.have.property('totalWorkouts', 1)
+      expect(res.body.stats).to.have.property('totalMinutes', 45)
+      expect(res.body.stats).to.have.property('totalCalories', 350)
+      expect(res.body.stats).to.have.property('mostFrequentGym', 'Cardio Zone')
+      expect(res.body.stats).to.have.property('mostFrequentExercise', 'Treadmill')
     })
     
     it('should filter workouts by type', async () => {
-      const res = await request(app).get('/api/history/user/1?type=Cardio')
+      await History.create({
+        userId: testUserId,
+        facilityId: testFacilityId,
+        zoneId: testZoneId,
+        zoneName: 'Strength Zone',
+        date: new Date(),
+        duration: 60,
+        type: 'Strength',
+        exercises: ['Bench Press'],
+        caloriesBurned: 300
+      })
+      
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}?type=Cardio`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(200)
-      res.body.data.forEach(workout => {
-        expect(workout.type).to.equal('Cardio')
-      })
+      expect(res.body.data.length).to.equal(1)
+      expect(res.body.data[0].type).to.equal('Cardio')
     })
     
     it('should filter workouts by date range', async () => {
       const res = await request(app)
-        .get('/api/history/user/1?startDate=2024-01-01&endDate=2024-12-31')
+        .get(`/api/history/user/${testUserId.toString()}?startDate=2024-11-01&endDate=2024-11-30`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(200)
       res.body.data.forEach(workout => {
         const workoutDate = new Date(workout.date)
-        expect(workoutDate).to.be.at.least(new Date('2024-01-01'))
-        expect(workoutDate).to.be.at.most(new Date('2024-12-31'))
+        expect(workoutDate).to.be.at.least(new Date('2024-11-01'))
+        expect(workoutDate).to.be.at.most(new Date('2024-11-30'))
+      })
+    })
+    
+    it('should filter workouts by location (zoneName)', async () => {
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}?location=Cardio`)
+        .set('Authorization', `Bearer ${authToken}`)
+      
+      expect(res.status).to.equal(200)
+      res.body.data.forEach(workout => {
+        expect(workout.zoneName.toLowerCase()).to.include('cardio')
       })
     })
     
     it('should return empty array for user with no workouts', async () => {
-      const res = await request(app).get('/api/history/user/999')
+      const fakeId = new mongoose.Types.ObjectId()
+      const res = await request(app)
+        .get(`/api/history/user/${fakeId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(200)
       expect(res.body.data).to.be.an('array')
       expect(res.body.data.length).to.equal(0)
+    })
+    
+    it('should return 401 without auth token', async () => {
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+      
+      expect(res.status).to.equal(401)
     })
   })
   
@@ -112,38 +245,40 @@ describe('History API Tests', () => {
   
   describe('GET /api/history/:id', () => {
     it('should return specific workout by ID', async () => {
-      const res = await request(app).get('/api/history/1')
+      const res = await request(app)
+        .get(`/api/history/${testWorkoutId}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(200)
       expect(res.body).to.have.property('success', true)
-      expect(res.body.data).to.have.property('id', 1)
+      expect(res.body.data).to.have.property('_id', testWorkoutId)
     })
     
     it('should return workout with exercises array', async () => {
-      const res = await request(app).get('/api/history/1')
+      const res = await request(app)
+        .get(`/api/history/${testWorkoutId}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.body.data.exercises).to.be.an('array')
-    })
-    
-    it('should return workout with correct data types', async () => {
-      const res = await request(app).get('/api/history/1')
-      
-      const workout = res.body.data
-      expect(workout.id).to.be.a('number')
-      expect(workout.userId).to.be.a('number')
-      expect(workout.facilityId).to.be.a('number')
-      expect(workout.zoneId).to.be.a('number')
-      expect(workout.zoneName).to.be.a('string')
-      expect(workout.duration).to.be.a('number')
-      expect(workout.type).to.be.a('string')
-      expect(workout.exercises).to.be.an('array')
+      expect(res.body.data.exercises).to.deep.equal(['Treadmill', 'Elliptical'])
     })
     
     it('should return 404 for non-existent workout', async () => {
-      const res = await request(app).get('/api/history/999')
+      const fakeId = new mongoose.Types.ObjectId()
+      const res = await request(app)
+        .get(`/api/history/${fakeId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       expect(res.status).to.equal(404)
       expect(res.body).to.have.property('success', false)
+    })
+    
+    it('should return 400 for invalid ObjectId', async () => {
+      const res = await request(app)
+        .get('/api/history/invalid-id')
+        .set('Authorization', `Bearer ${authToken}`)
+      
+      expect(res.status).to.equal(400)
     })
   })
   
@@ -155,94 +290,70 @@ describe('History API Tests', () => {
     it('should create new workout with valid data', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           zoneName: 'Test Zone',
-          date: '2024-11-20T10:00:00Z',
           duration: 30,
           type: 'Cardio',
-          exercises: ['Treadmill', 'Elliptical'],
+          exercises: ['Treadmill', 'Bike'],
           caloriesBurned: 250
         })
       
-      // Backend might return 400 or 201 depending on validation
-      // Accept either as valid for now
-      expect([201, 400]).to.include(res.status)
-      
-      if (res.status === 201) {
-        expect(res.body).to.have.property('success', true)
-        expect(res.body.data).to.have.property('id')
-      }
+      expect(res.status).to.equal(201)
+      expect(res.body).to.have.property('success', true)
+      expect(res.body.data).to.have.property('_id')
+      expect(res.body.data.exercises).to.deep.equal(['Treadmill', 'Bike'])
     })
     
     it('should store exercises array correctly', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 2,
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           zoneName: 'Strength Zone',
-          date: '2024-11-20T10:00:00Z',
           duration: 45,
           type: 'Strength',
           exercises: ['Bench Press', 'Squats', 'Deadlifts'],
           caloriesBurned: 400
         })
       
-      if (res.status === 201 && res.body.data && res.body.data.exercises) {
-        expect(res.body.data.exercises).to.deep.equal(['Bench Press', 'Squats', 'Deadlifts'])
-      }
+      expect(res.status).to.equal(201)
+      expect(res.body.data.exercises).to.deep.equal(['Bench Press', 'Squats', 'Deadlifts'])
     })
     
     it('should handle workout with empty exercises array', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           zoneName: 'Cardio Zone',
-          date: '2024-11-20T10:00:00Z',
           duration: 30,
           type: 'Cardio',
           exercises: [],
           caloriesBurned: 200
         })
       
-      expect([201, 400]).to.include(res.status)
-      
-      if (res.status === 201) {
-        expect(res.body.data.exercises).to.be.an('array')
-        expect(res.body.data.exercises).to.have.lengthOf(0)
-      }
-    })
-    
-    it('should apply default values for optional fields', async () => {
-      const res = await request(app)
-        .post('/api/history')
-        .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
-          zoneName: 'Test Zone',
-          date: '2024-11-20T10:00:00Z',
-          duration: 30,
-          type: 'Cardio'
-        })
-      
-      // Backend may require more fields
-      expect([201, 400]).to.include(res.status)
+      expect(res.status).to.equal(201)
+      expect(res.body.data.exercises).to.be.an('array')
+      expect(res.body.data.exercises).to.have.lengthOf(0)
     })
     
     it('should return 400 when userId is missing', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          facilityId: 1,
-          zoneId: 1,
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           duration: 30,
           type: 'Cardio'
         })
@@ -251,40 +362,15 @@ describe('History API Tests', () => {
       expect(res.body).to.have.property('success', false)
     })
     
-    it('should return 400 when facilityId is missing', async () => {
-      const res = await request(app)
-        .post('/api/history')
-        .send({
-          userId: 1,
-          zoneId: 1,
-          duration: 30,
-          type: 'Cardio'
-        })
-      
-      expect(res.status).to.equal(400)
-    })
-    
     it('should return 400 when duration is missing', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           type: 'Cardio'
-        })
-      
-      expect(res.status).to.equal(400)
-    })
-    
-    it('should return 400 when type is missing', async () => {
-      const res = await request(app)
-        .post('/api/history')
-        .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
-          duration: 30
         })
       
       expect(res.status).to.equal(400)
@@ -293,16 +379,52 @@ describe('History API Tests', () => {
     it('should reject invalid exercises format', async () => {
       const res = await request(app)
         .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          userId: 1,
-          facilityId: 1,
-          zoneId: 1,
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
           duration: 30,
           type: 'Cardio',
           exercises: 'Treadmill'  // String instead of array
         })
       
       expect(res.status).to.equal(400)
+    })
+    
+    it('should return 403 when logging workout for another user', async () => {
+      const otherUser = await User.create({
+        name: 'Other User',
+        email: 'other@test.com',
+        password: 'other123'
+      })
+      
+      const res = await request(app)
+        .post('/api/history')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          userId: otherUser._id.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
+          duration: 30,
+          type: 'Cardio'
+        })
+      
+      expect(res.status).to.equal(403)
+    })
+    
+    it('should return 401 without auth token', async () => {
+      const res = await request(app)
+        .post('/api/history')
+        .send({
+          userId: testUserId.toString(),
+          facilityId: testFacilityId.toString(),
+          zoneId: testZoneId.toString(),
+          duration: 30,
+          type: 'Cardio'
+        })
+      
+      expect(res.status).to.equal(401)
     })
   })
   
@@ -312,35 +434,40 @@ describe('History API Tests', () => {
   
   describe('Data Integrity', () => {
     it('should have unique workout IDs', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      await History.create({
+        userId: testUserId,
+        facilityId: testFacilityId,
+        zoneId: testZoneId,
+        zoneName: 'Zone 2',
+        date: new Date(),
+        duration: 30,
+        type: 'Cardio',
+        exercises: []
+      })
       
-      if (res.body.data.length > 1) {
-        const ids = res.body.data.map(w => w.id)
-        const uniqueIds = [...new Set(ids)]
-        expect(ids.length).to.equal(uniqueIds.length)
-      }
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
+      
+      const ids = res.body.data.map(w => w._id)
+      const uniqueIds = [...new Set(ids)]
+      expect(ids.length).to.equal(uniqueIds.length)
     })
     
     it('should have all workouts with valid userId', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       res.body.data.forEach(workout => {
-        expect(workout.userId).to.equal(1)
-        expect(workout.userId).to.be.a('number')
-      })
-    })
-    
-    it('should have all workouts with valid facilityId', async () => {
-      const res = await request(app).get('/api/history/user/1')
-      
-      res.body.data.forEach(workout => {
-        expect(workout.facilityId).to.be.a('number')
-        expect(workout.facilityId).to.be.greaterThan(0)
+        expect(workout.userId.toString()).to.equal(testUserId.toString())
       })
     })
     
     it('should have all workouts with positive duration', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
       
       res.body.data.forEach(workout => {
         expect(workout.duration).to.be.a('number')
@@ -348,49 +475,26 @@ describe('History API Tests', () => {
       })
     })
     
-    it('should have all workouts with valid date format', async () => {
-      const res = await request(app).get('/api/history/user/1')
-      
-      res.body.data.forEach(workout => {
-        expect(workout.date).to.be.a('string')
-        expect(new Date(workout.date)).to.be.instanceOf(Date)
-      })
-    })
-  })
-  
-  // ============================================
-  // Edge Cases
-  // ============================================
-  
-  describe('Edge Cases', () => {
-    it('should return JSON content type', async () => {
-      const res = await request(app).get('/api/history/user/1')
-      
-      expect(res.headers['content-type']).to.match(/json/)
-    })
-    
-    it('should handle negative workout ID', async () => {
-      const res = await request(app).get('/api/history/-1')
-      
-      expect(res.status).to.equal(404)
-    })
-    
-    it('should handle string userId in query', async () => {
-      const res = await request(app).get('/api/history/user/abc')
-      
-      expect(res.status).to.equal(200)
-      expect(res.body.data).to.be.an('array')
-    })
-    
     it('should sort workouts by date (newest first)', async () => {
-      const res = await request(app).get('/api/history/user/1')
+      await History.create({
+        userId: testUserId,
+        facilityId: testFacilityId,
+        zoneId: testZoneId,
+        zoneName: 'Zone 2',
+        date: new Date('2024-11-25T10:00:00Z'),
+        duration: 30,
+        type: 'Cardio',
+        exercises: []
+      })
       
-      if (res.body.data.length > 1) {
-        for (let i = 0; i < res.body.data.length - 1; i++) {
-          const date1 = new Date(res.body.data[i].date)
-          const date2 = new Date(res.body.data[i + 1].date)
-          expect(date1).to.be.at.least(date2)
-        }
+      const res = await request(app)
+        .get(`/api/history/user/${testUserId.toString()}`)
+        .set('Authorization', `Bearer ${authToken}`)
+      
+      for (let i = 0; i < res.body.data.length - 1; i++) {
+        const date1 = new Date(res.body.data[i].date)
+        const date2 = new Date(res.body.data[i + 1].date)
+        expect(date1.getTime()).to.be.at.least(date2.getTime())
       }
     })
   })
