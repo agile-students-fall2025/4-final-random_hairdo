@@ -16,7 +16,7 @@ function Register() {
 
   // verify nyu email format
   const isNyuEmail = (value) =>
-    /^[A-Za-z]{2,3}\d{4,5}@nyu\.edu$/i.test(value.trim());
+     /^[^\s@]+@nyu.edu$/i.test(value.trim())
 
   useEffect(() => {
     setIsFormValid(
