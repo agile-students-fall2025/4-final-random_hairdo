@@ -28,14 +28,19 @@ function Goals() {
     if (!authToken) return;
 
     try {
-      const res = await fetch("http://localhost:3000/api/goals", {
+      const res = await fetch("/api/goals", { // relative URL
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
-      const data = await res.json();
-      if (!data) return;
+      if (res.status === 401) { // handle unauthorized
+        localStorage.clear();
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
 
-      const goalsData = Array.isArray(data) ? data : data.data;
+      const data = await res.json();
+      const goalsData = Array.isArray(data) ? data : data.remainingGoals || data.data;
 
       setGoals(goalsData.filter((g) => g.progress < 100));
       setCompletedGoals(goalsData.filter((g) => g.progress >= 100));
@@ -49,14 +54,14 @@ function Goals() {
   }, [authToken]);
 
   // ------------------------
-  // Add, complete, remove, clear goals (same as before)
+  // Add, complete, remove, clear goals
   // ------------------------
   const addGoal = async () => {
     const trimmed = newGoal.trim();
     if (!trimmed || !authToken) return;
 
     try {
-      const res = await fetch("http://localhost:3000/api/goals", {
+      const res = await fetch("/api/goals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,6 +69,13 @@ function Goals() {
         },
         body: JSON.stringify({ goal: trimmed }),
       });
+
+      if (res.status === 401) { // handle unauthorized
+        localStorage.clear();
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
 
       const data = await res.json();
       if (!data) return;
@@ -78,12 +90,19 @@ function Goals() {
   const removeGoal = async (id) => {
     if (!authToken) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/goals/${id}`, {
+      const res = await fetch(`/api/goals/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      const data = await res.json();
 
+      if (res.status === 401) {
+        localStorage.clear();
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
+      const data = await res.json();
       setGoals(data.remainingGoals.filter((g) => g.progress < 100));
       setCompletedGoals(data.remainingGoals.filter((g) => g.progress >= 100));
     } catch (err) {
@@ -94,7 +113,7 @@ function Goals() {
   const completeGoal = async (goal) => {
     if (!authToken) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/goals/${goal._id}`, {
+      const res = await fetch(`/api/goals/${goal._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -103,9 +122,14 @@ function Goals() {
         body: JSON.stringify({ progress: 100 }),
       });
 
-      const data = await res.json();
-      if (!data) return;
+      if (res.status === 401) {
+        localStorage.clear();
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
 
+      const data = await res.json();
       setGoals((prev) => prev.filter((g) => g._id !== goal._id));
       setCompletedGoals((prev) => [...prev, data]);
     } catch (err) {
@@ -116,12 +140,19 @@ function Goals() {
   const clearAllGoals = async () => {
     if (!authToken) return;
     try {
-      const res = await fetch("http://localhost:3000/api/goals", {
+      const res = await fetch("/api/goals", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      const data = await res.json();
 
+      if (res.status === 401) {
+        localStorage.clear();
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
+      const data = await res.json();
       setGoals([]);
       setCompletedGoals([]);
     } catch (err) {
