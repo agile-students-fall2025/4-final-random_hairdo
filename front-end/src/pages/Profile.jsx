@@ -43,7 +43,7 @@ function Profile() {
     }
 
     const token = localStorage.getItem('token')
-    // Using relative URL 
+    // ✅ Using relative URL (Vite proxy forwards to localhost:3000)
     fetch(`/api/users/${userFromToken.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -137,7 +137,7 @@ function Profile() {
               <p className="text-lg">{user.email}</p>
             </div>
 
-            {/* Focus Tags */}
+            {/* Focus Tags - What I'm Currently Focusing On */}
             {user.focusTags && user.focusTags.length > 0 && (
               <div>
                 <p className="text-sm text-gray-600">Current Focus</p>
@@ -148,6 +148,23 @@ function Profile() {
                       className="px-3 py-1 bg-[#462c9f] text-white text-sm rounded-full"
                     >
                       {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Goals */}
+            {user.goals && user.goals.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-600">Goals</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {user.goals.map((goal, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded-full"
+                    >
+                      {goal}
                     </span>
                   ))}
                 </div>
