@@ -13,7 +13,7 @@ function Login() {
     try {
       setLoading(true)
 
-      // ✅ FIX 1: Using relative URL (Vite proxy forwards to localhost:3000)
+      // Using relative URL
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,7 +27,7 @@ function Login() {
         return
       }
 
-      // ✅ FIX 2: Only store token (user data is in JWT payload)
+      // Only store token (user data is in JWT payload)
       localStorage.setItem('token', data.token)
 
       alert("Login successful!")
