@@ -25,7 +25,17 @@ const userSchema = new mongoose.Schema({
   goals: [{
     type: String,
     trim: true
-  }]
+  }],
+  focusTags: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: function(tags) {
+        return tags.length <= 3  // Max 3 tags
+      },
+      message: 'Maximum 3 focus tags allowed'
+    }
+  }
 }, {
   timestamps: true
 })

@@ -1,11 +1,42 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function Settings() {
   const navigate = useNavigate();
 
-  // TODO: replace with real logged-in user id
-  const USER_ID = 1;
+  // ---- Get current user + id from localStorage / JWT ----
+  const { userId, isAuthed } = useMemo(() => {
+    let userId = null;
+
+    // Try to get user object (if your login stores it)
+    const storedUserRaw = localStorage.getItem("user");
+    if (storedUserRaw) {
+      try {
+        const storedUser = JSON.parse(storedUserRaw);
+        userId = storedUser._id || storedUser.id || null;
+      } catch {
+        // ignore parse error, we'll try token next
+      }
+    }
+
+    // Fallback: decode JWT and pull id from payload
+    if (!userId) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const [, payloadBase64] = token.split(".");
+          const payloadJson = atob(payloadBase64);
+          const payload = JSON.parse(payloadJson);
+          // depending on how you signed the token
+          userId = payload.id || payload.user?.id || null;
+        } catch {
+          // bad token, ignore
+        }
+      }
+    }
+
+    return { userId, isAuthed: Boolean(userId) };
+  }, []);
 
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
@@ -13,20 +44,31 @@ export default function Settings() {
   const onSignOut = () => {
     // clear any client-side session state
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     sessionStorage.clear();
     navigate("/login");
   };
 
   const onDelete = async () => {
+    if (!isAuthed || !userId) {
+      setDeleteErr("You must be logged in to delete your account.");
+      return;
+    }
+
     if (!window.confirm("Delete your account? This cannot be undone.")) return;
 
     try {
       setDeleting(true);
       setDeleteErr("");
 
-      const res = await fetch(`/api/settings/account/${USER_ID}`, {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`/api/settings/account/${userId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
 
       const body = await res.json().catch(() => ({}));
@@ -64,7 +106,11 @@ export default function Settings() {
           Back to Home Page
         </Link>
         <Link to="/" aria-label="Home">
-          <img src="/smartfit_logo.png" alt="SMARTFIT logo" className="h-12 w-auto md:h-16" />
+          <img
+            src="/smartfit_logo.png"
+            alt="SMARTFIT logo"
+            className="h-12 w-auto md:h-16"
+          />
         </Link>
       </header>
 
@@ -72,10 +118,22 @@ export default function Settings() {
         <h1 className="mt-6 text-4xl font-semibold">Settings</h1>
 
         <nav aria-label="Settings actions" className="mt-6 flex flex-col gap-4">
-          <Link to="/notifications" className={btnPrimary}>Notifications</Link>
-          <Link to="/support" className={btnPrimary}>Help &amp; Support</Link>
-          <Link to="/change-password" className={btnPrimary}>Change Password</Link>
-          <button type="button" onClick={onSignOut} className={btnPrimaryBtn}>Sign Out</button>
+          <Link to="/notifications" className={btnPrimary}>
+            Notifications
+          </Link>
+          <Link to="/support" className={btnPrimary}>
+            Help &amp; Support
+          </Link>
+          <Link to="/change-password" className={btnPrimary}>
+            Change Password
+          </Link>
+          <button
+            type="button"
+            onClick={onSignOut}
+            className={btnPrimaryBtn}
+          >
+            Sign Out
+          </button>
         </nav>
 
         <div className="h-20" />
@@ -90,10 +148,16 @@ export default function Settings() {
           <button
             type="button"
             onClick={onDelete}
-            disabled={deleting}
-            className={`md:w-[520px] ${btnOutlineBtn} ${deleting ? "opacity-60 cursor-not-allowed" : ""}`}
+            disabled={deleting || !isAuthed}
+            className={`md:w-[520px] ${btnOutlineBtn} ${
+              deleting || !isAuthed ? "opacity-60 cursor-not-allowed" : ""
+            }`}
           >
-            {deleting ? "Deleting…" : "Delete Account"}
+            {deleting
+              ? "Deleting…"
+              : isAuthed
+              ? "Delete Account"
+              : "Login to delete account"}
           </button>
         </div>
       </main>

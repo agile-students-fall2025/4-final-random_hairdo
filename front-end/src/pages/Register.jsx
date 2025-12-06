@@ -1,79 +1,105 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [emailError, setEmailError] = useState('')
-  const [passwordError, setPasswordError] = useState('')
-  const [isFormValid, setIsFormValid] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const navigate = useNavigate()
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   // verify nyu email format
   const isNyuEmail = (value) =>
-    /^[A-Za-z]{2,3}\d{4,5}@nyu\.edu$/i.test(value.trim())
+    /^[^\s@]+@nyu\.edu$/i.test(value.trim());
 
   useEffect(() => {
     setIsFormValid(
       isNyuEmail(email) &&
         password.length > 0 &&
         password === confirmPassword
-    )
-  }, [email, password, confirmPassword])
+    );
+  }, [email, password, confirmPassword]);
 
   const handleRegister = async (e) => {
-    e.preventDefault()
-    setEmailError('')
-    setPasswordError('')
+    e.preventDefault();
+    setEmailError("");
+    setPasswordError("");
+    setServerError("");
 
     if (!isNyuEmail(email)) {
-      setEmailError('You must register with a valid @nyu.edu email.')
-      return
+      setEmailError("You must register with a valid @nyu.edu email.");
+      return;
     }
 
     if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match.')
-      return
+      setPasswordError("Passwords do not match.");
+      return;
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/register", {
+      setLoading(true);
+
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: email.split('@')[0], // temporary name
+          name: email.split("@")[0], // temporary name from email
           email,
-          password
-        })
-      })
+          password,
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        setEmailError(data.message || "Registration failed.")
-        return
+      if (!res.ok || data.success === false) {
+        // Check message first (backend sends it there)
+        const errorMsg = data.message || data.error || "Registration failed.";
+
+        // Route error to appropriate field
+        if (errorMsg.toLowerCase().includes('password')) {
+          setPasswordError(errorMsg);
+        } else if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('exists')) {
+          setEmailError(errorMsg);
+        } else {
+          setServerError(errorMsg);
+        }
+        return;
+        
       }
 
-      alert("Registration successful!")
-      navigate("/login")
+      // If backend sends token + user, store them (optional but nice)
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
 
+      // You can skip the alert if you want, but it’s clear UX
+      alert("Registration successful!");
+      navigate("/login");
     } catch (err) {
-      console.error(err)
-      alert("Server error. Try again later.")
+      console.error(err);
+      setServerError("Server error. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-  }
-
+  };
 
   const getEmailHelperText = () => {
-    if (emailError) return emailError
-    if (!email) return 'Must be an @nyu.edu email to register.'
-    if (isNyuEmail(email)) return null
-    return 'e.g. abc123@nyu.edu'
-  }
+    if (emailError) return emailError;
+    if (!email) return "Must be an @nyu.edu email to register.";
+    if (isNyuEmail(email)) return null;
+    return "e.g. abc123@nyu.edu";
+  };
 
-  const emailHelper = getEmailHelperText()
+  const emailHelper = getEmailHelperText();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
@@ -84,27 +110,25 @@ function Register() {
 
         <h2 className="text-center text-3xl font-semibold">Register</h2>
 
+        {serverError && (
+          <p className="mt-1 text-sm text-red-600 text-center">{serverError}</p>
+        )}
+
         <form className="mt-4 space-y-4" onSubmit={handleRegister}>
           <div>
             <input
               value={email}
               onChange={(e) => {
-                setEmail(e.target.value)
-                if (emailError) setEmailError('')
+                setEmail(e.target.value);
+                if (emailError) setEmailError("");
               }}
               type="email"
               required
-              className={
-                'mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]'
-              }
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
               placeholder="Email (must be @nyu.edu)"
             />
             {emailHelper && (
-              <p
-                className='mt-1 text-sm'
-              >
-                {emailHelper}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{emailHelper}</p>
             )}
           </div>
 
@@ -112,8 +136,8 @@ function Register() {
             <input
               value={password}
               onChange={(e) => {
-                setPassword(e.target.value)
-                if (passwordError) setPasswordError('')
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError("");
               }}
               type="password"
               required
@@ -126,8 +150,8 @@ function Register() {
             <input
               value={confirmPassword}
               onChange={(e) => {
-                setConfirmPassword(e.target.value)
-                if (passwordError) setPasswordError('')
+                setConfirmPassword(e.target.value);
+                if (passwordError) setPasswordError("");
               }}
               type="password"
               required
@@ -141,25 +165,28 @@ function Register() {
 
           <button
             type="submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || loading}
             className={
-              'w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium transition-colors ' +
-              (isFormValid ? 'hover:bg-[#3b237f]' : 'opacity-50 cursor-not-allowed')
+              "w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium transition-colors " +
+              (isFormValid && !loading
+                ? "hover:bg-[#3b237f]"
+                : "opacity-50 cursor-not-allowed")
             }
           >
-            Register
+            {loading ? "Registering…" : "Register"}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-600">
-          Already have an account? Click{' '}
+          Already have an account? Click{" "}
           <Link to="/login" className="text-[#462c9f] hover:underline">
             here to log in
-          </Link>.
+          </Link>
+          .
         </p>
       </div>
     </div>
-  )
+  );
 }
 
-export default Register
+export default Register;

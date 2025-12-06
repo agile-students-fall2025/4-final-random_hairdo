@@ -1,21 +1,21 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
 
 function Home() {
-  const [user, setUser] = useState(null)
+  const navigate = useNavigate()
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Decode JWT to get user ID
+  // Decode JWT to get user object
   const userFromToken = useMemo(() => {
     try {
       const token = localStorage.getItem('token')
       if (!token) return null
       
       const decoded = jwtDecode(token)
-      // Token payload is { id, email }
-      return decoded
+      // Token payload is { user: { id, email, name } }
+      return decoded.user  // Return user object
     } catch (error) {
       console.error('Error decoding token:', error)
       localStorage.removeItem('token')
@@ -23,33 +23,14 @@ function Home() {
     }
   }, [])
 
+  // Auth guard - redirect to login if no token
   useEffect(() => {
-    if (userFromToken) {
-      // Fetch user details to get name and other info
-      const fetchUserDetails = async () => {
-        try {
-          const token = localStorage.getItem('token')
-          const response = await fetch(`/api/users/${userFromToken.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            if (data.success) {
-              setUser(data.data)
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching user details:', error)
-        }
-      }
-      
-      fetchUserDetails()
+    if (!userFromToken?.id) {
+      alert('Please log in to continue')
+      navigate('/login')
     }
-  }, [userFromToken])
-
+  }, [userFromToken, navigate])
+  
   useEffect(() => {
     const fetchActiveQueue = async () => {
       if (!userFromToken?.id) {
@@ -59,6 +40,7 @@ function Home() {
 
       try {
         const token = localStorage.getItem('token')
+        // Using relative URL 
         const response = await fetch(`/api/queues/user/${userFromToken.id}?status=active`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -67,8 +49,9 @@ function Home() {
         
         if (response.status === 401) {
           console.error('Unauthorized: Session expired')
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          localStorage.clear()
+          alert('Your session has expired. Please log in again.')
+          navigate('/login')
           return
         }
         
@@ -95,7 +78,7 @@ function Home() {
     // Poll for updates every 10 seconds
     const interval = setInterval(fetchActiveQueue, 10000)
     return () => clearInterval(interval)
-  }, [userFromToken])
+  }, [userFromToken, navigate])
 
   const formatWaitTime = (minutes) => {
     if (minutes === 0) return 'Next in line!'
@@ -130,8 +113,9 @@ function Home() {
         </div>
       </div>
       <div>
+        {/* Use userFromToken.name directly (already in JWT!) */}
         <h1 className="text-3xl text-left">
-          Hello, {user?.name || "guest"}!
+          Hello, {userFromToken?.name || "guest"}!
         </h1>
       </div>
 

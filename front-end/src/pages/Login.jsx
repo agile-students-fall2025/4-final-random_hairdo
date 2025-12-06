@@ -4,13 +4,17 @@ import { Link, useNavigate } from 'react-router-dom'
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleLogIn = async (e) => {
     e.preventDefault()
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      setLoading(true)
+
+      // ✅ FIX 1: Using relative URL (Vite proxy forwards to localhost:3000)
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
@@ -23,14 +27,16 @@ function Login() {
         return
       }
 
-      // Store only the token 
-      localStorage.setItem('token', data.data.token)
+      // ✅ FIX 2: Only store token (user data is in JWT payload)
+      localStorage.setItem('token', data.token)
 
       alert("Login successful!")
-      navigate("/") // Redirect to Home after login
+      navigate("/profile")
     } catch (err) {
       console.error(err)
       alert("Something went wrong connecting to server.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -66,15 +72,18 @@ function Login() {
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-[#462c9f] text-white rounded-md 
-                       font-medium hover:bg-[#3b237f] transition-colors"
+            disabled={loading}
+            className={
+              "w-full py-2 px-4 bg-[#462c9f] text-white rounded-md font-medium transition-colors " +
+              (loading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#3b237f]")
+            }
           >
-            Log in
+            {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-600">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link to="/register" className="text-[#462c9f] hover:underline">
             Sign up
           </Link>
