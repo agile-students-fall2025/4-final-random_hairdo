@@ -1,111 +1,106 @@
 import express from 'express'
-import { Zone } from '../db.js'
 import mongoose from 'mongoose'
+import { param, query, validationResult } from 'express-validator'
+import { Zone } from '../db.js'
 
 const router = express.Router()
 
-// ============================================
-// GET ALL ZONES (with optional facility filter)
-// ============================================
 /**
- * GET /api/zones
- * Get all equipment zones
- * Query params: ?facilityId=<id> to filter by facility
- * Returns: Zone name, queue length, wait time, capacity
- * Used by: Zones page
- */
-router.get('/', async (req, res) => {
-  try {
-    const { facilityId } = req.query
-    
-    let query = {}
-    if (facilityId) {
-      // Validate ObjectId format
-      if (!mongoose.Types.ObjectId.isValid(facilityId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          message: 'Invalid facility ID format - must be a valid ObjectId'
-        })
-      }
-      query.facilityId = facilityId
-    }
-    
-    // Populate facility data and sort alphabetically
-    const zones = await Zone.find(query)
-      .populate('facilityId')
-      .sort({ name: 1 })
-    
-    // Return 200 with empty array if no zones found - this is not an error
-    res.json({
-      success: true,
-      data: zones,
-      count: zones.length,
-      message: zones.length === 0 ? 'No zones found' : undefined
-    })
-  } catch (error) {
-    console.error('Error in GET /api/zones:', error)
-    res.status(500).json({
-      success: false,
-      error: 'Server error',
-      message: error.message
-    })
-  }
+* GET /api/zones
+* Get all equipment zones
+* Query params: ?facilityId=<id> to filter by facility
+* Returns: Zone name, queue length, wait time, capacity
+* Used by: Zones page
+*/
+router.get('/',
+[
+query('facilityId').optional().isMongoId().withMessage('Invalid facility ID format')
+],
+async (req, res) => {
+// Check validation errors
+const errors = validationResult(req)
+if (!errors.isEmpty()) {
+return res.status(400).json({
+success: false,
+error: 'Validation failed',
+message: errors.array()[0].msg
 })
+}
 
-// ============================================
-// GET SINGLE ZONE BY ID
-// ============================================
-/**
- * GET /api/zones/:id
- * Get specific zone details
- * Returns: Detailed zone information including current queue status
- * Used by: Zone details page, Queue confirmation
- */
-router.get('/:id', async (req, res) => {
-  try {
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        message: 'Invalid zone ID format - must be a valid ObjectId'
-      })
-    }
-    
-    // Populate facility data
-    const zone = await Zone.findById(req.params.id).populate('facilityId')
-    
-    if (!zone) {
-      return res.status(404).json({
-        success: false,
-        error: 'Not found',
-        message: 'Zone not found'
-      })
-    }
-    
-    res.json({
-      success: true,
-      data: zone
-    })
-  } catch (error) {
-    console.error('Error in GET /api/zones/:id:', error)
-    
-    // Handle mongoose cast errors
-    if (error.kind === 'ObjectId') {
-      return res.status(404).json({
-        success: false,
-        error: 'Not found',
-        message: 'Zone not found'
-      })
-    }
-    
-    res.status(500).json({
-      success: false,
-      error: 'Server error',
-      message: error.message
-    })
-  }
+try {
+const { facilityId } = req.query
+
+let queryObj = {}
+if (facilityId) {
+queryObj.facilityId = facilityId
+}
+
+const zones = await Zone.find(queryObj).populate('facilityId')
+
+if (facilityId && zones.length === 0) {
+return res.status(404).json({
+success: false,
+error: `No zones found for facility ID ${facilityId}`
 })
+}
+
+res.json({
+success: true,
+data: zones,
+count: zones.length
+})
+} catch (error) {
+res.status(500).json({
+success: false,
+error: 'Server error',
+message: error.message
+})
+}
+}
+)
+
+/**
+* GET /api/zones/:id
+* Get specific zone details
+* Returns: Detailed zone information including current queue status
+*/
+router.get('/:id',
+[
+param('id').isMongoId().withMessage('Invalid zone ID format')
+],
+async (req, res) => {
+// Check validation errors
+const errors = validationResult(req)
+if (!errors.isEmpty()) {
+return res.status(400).json({
+success: false,
+error: 'Validation failed',
+message: errors.array()[0].msg
+})
+}
+
+try {
+const zone = await Zone.findById(req.params.id).populate('facilityId')
+
+if (!zone) {
+return res.status(404).json({
+success: false,
+error: 'Zone not found'
+})
+}
+
+res.json({
+success: true,
+data: zone
+})
+} catch (error) {
+res.status(500).json({
+success: false,
+error: 'Server error',
+message: error.message
+})
+}
+}
+)
 
 export default router
