@@ -42,7 +42,7 @@ function ConfirmedQueue() {
     const [estimatedWait, setEstimatedWait] = useState(
         initialWait || zone.averageWaitTime || 0
     );
-    const [error, setError] = useState(null);
+    const [, setError] = useState(null);
     const [toast, setToast] = useState(null);
     const [showConfirm, setShowConfirm] = useState(false);
 
