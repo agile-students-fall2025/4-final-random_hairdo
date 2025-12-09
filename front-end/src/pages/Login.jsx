@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import Toast from '../components/Toast'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState(null)
   const navigate = useNavigate()
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type })
+  }
 
   const handleLogIn = async (e) => {
     e.preventDefault()
@@ -23,18 +29,18 @@ function Login() {
       const data = await res.json()
 
       if (!res.ok) {
-        alert(data.message || "Login failed")
+        showToast(data.message || "Login failed", "error")
         return
       }
 
       // Only store token (user data is in JWT payload)
       localStorage.setItem('token', data.token)
 
-      alert("Login successful!")
-      navigate("/profile")
+      showToast("Login successful!", "success")
+      setTimeout(() => navigate("/"), 1000) // Redirect to Home after login
     } catch (err) {
       console.error(err)
-      alert("Something went wrong connecting to server.")
+      showToast("Something went wrong connecting to server.", "error")
     } finally {
       setLoading(false)
     }
@@ -42,6 +48,14 @@ function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="w-full max-w-md p-8 space-y-6">
         <div className="flex justify-center">
           <img src="/smartfit_logo.png" alt="Logo" className="w-70 h-auto" />

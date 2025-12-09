@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 
-// Shared button styles
-const btnPrimary =
-  "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition"
-const btnOutline =
-  "w-full px-5 py-3 rounded-lg border-2 border-[#462c9f] text-[#462c9f] text-base font-semibold text-center hover:bg-[#462c9f] hover:text-white transition"
-
 function EditProfile() {
   const navigate = useNavigate()
   
@@ -163,29 +157,22 @@ function EditProfile() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#efefed] px-6 py-6">
-      {/* Header with Back Button and Logo */}
-      <div className="w-full flex items-start justify-between mb-12">
-        <div className="flex items-start">
-          <Link
-            to="/profile"
-            aria-label="Back to Profile"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-black text-white text-sm font-medium hover:bg-[#462c9f] transition-colors"
-          >
-            Back to Profile Dashboard
-          </Link>
-        </div>
+      <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
+        <Link
+          to="/settings"
+          className="px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm hover:opacity-90"
+        >
+          Back to Settings
+        </Link>
+        <Link to="/">
+          <img src="/smartfit_logo.png" className="h-12 md:h-16" />
+        </Link>
+      </header>
 
-        <div className="flex items-center">
-          <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
-        </div>
-      </div>
-
-      {/* Page Title */}
-      <h1 className="text-4xl font-normal text-center mb-2 text-[#282f3e]">
-        Edit Profile
-      </h1>
-      <p className="text-center text-sm text-gray-600 mb-8">
-        Update your personal information below
+      {/* Page Title - Centered */}
+      <h1 className="text-4xl font-semibold mb-2">Edit Profile</h1>
+      <p className="text-gray-600 mb-6">
+        Update your personal information below.
       </p>
 
       {/* Form Card */}

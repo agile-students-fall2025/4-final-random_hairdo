@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+// Shared styles
+const btnPrimary =
+  "px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition cursor-pointer";
+const card = "rounded-lg bg-white shadow-sm border border-gray-200";
+
 export default function Support() {
   const navigate = useNavigate();
 
@@ -120,31 +125,23 @@ export default function Support() {
     }
   };
 
-  // Shared styles
-  const btnDark =
-    "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
-  const btnPrimary =
-    "px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition cursor-pointer";
-  const card = "rounded-lg bg-white shadow-sm border border-gray-200";
-
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4">
       {/* Header */}
-      <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between">
-        <Link to="/settings" className={btnDark}>
+      <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
+        <Link
+          to="/settings"
+          className="px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm hover:opacity-90"
+        >
           Back to Settings
         </Link>
-        <Link to="/" aria-label="Home">
-          <img
-            src="/smartfit_logo.png"
-            alt="SMARTFIT logo"
-            className="h-12 w-auto md:h-16"
-          />
+        <Link to="/">
+          <img src="/smartfit_logo.png" className="h-12 md:h-16" />
         </Link>
       </header>
 
       <main className="mx-auto w-full max-w-md md:max-w-xl">
-        <h1 className="mt-6 text-4xl font-semibold">Help &amp; Support</h1>
+        <h1 className="text-4xl font-semibold mb-2">Help &amp; Support</h1>
 
         {/* FAQ Section */}
         <section aria-label="FAQs" className="mt-6">

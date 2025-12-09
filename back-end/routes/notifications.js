@@ -118,4 +118,105 @@ router.put('/:id/read', [
   }
 })
 
+/**
+ * DELETE /api/notifications/user/:userId
+ * Delete all notifications for a specific user
+ * Used by: Notifications page (Clear All button)
+ */
+router.delete('/user/:userId', [
+  authenticate,
+  param('userId').isMongoId().withMessage('Invalid user ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
+  try {
+    const { userId } = req.params
+    
+    // Verify userId matches authenticated user
+    if (userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete notifications for another user'
+      })
+    }
+    
+    const result = await Notification.deleteMany({ userId })
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} notifications`,
+      deletedCount: result.deletedCount
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * DELETE /api/notifications/:id
+ * Delete a single notification
+ * Used by: Notifications page (individual delete)
+ */
+router.delete('/:id', [
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid notification ID format')
+], async (req, res) => {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    })
+  }
+  
+  try {
+    const notification = await Notification.findById(req.params.id)
+    
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
+      })
+    }
+    
+    // Verify ownership
+    if (notification.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this notification'
+      })
+    }
+    
+    await Notification.findByIdAndDelete(req.params.id)
+    
+    res.json({
+      success: true,
+      message: 'Notification deleted successfully'
+    })
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
+      })
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    })
+  }
+})
+
 export default router

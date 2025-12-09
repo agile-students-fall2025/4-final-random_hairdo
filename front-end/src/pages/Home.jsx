@@ -1,21 +1,35 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
+import { useSocket } from '../context/SocketContext'
+import Toast from '../components/Toast'
+
+const formatWaitTime = (minutes) => {
+  if (minutes === 0) return 'Next in line!'
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+}
 
 function Home() {
   const navigate = useNavigate()
+  const { socket, isConnected } = useSocket()
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState(null)
 
-  // Decode JWT to get user object
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type })
+  }
+
   const userFromToken = useMemo(() => {
     try {
       const token = localStorage.getItem('token')
       if (!token) return null
       
       const decoded = jwtDecode(token)
-      // Token payload is { user: { id, email, name } }
-      return decoded.user  // Return user object
+      return decoded.user
     } catch (error) {
       console.error('Error decoding token:', error)
       localStorage.removeItem('token')
@@ -23,11 +37,10 @@ function Home() {
     }
   }, [])
 
-  // Auth guard - redirect to login if no token
   useEffect(() => {
     if (!userFromToken?.id) {
-      alert('Please log in to continue')
-      navigate('/login')
+      showToast('Please log in to continue', 'warning')
+      setTimeout(() => navigate('/login'), 1000)
     }
   }, [userFromToken, navigate])
   
@@ -40,7 +53,6 @@ function Home() {
 
       try {
         const token = localStorage.getItem('token')
-        // Using relative URL 
         const response = await fetch(`/api/queues/user/${userFromToken.id}?status=active`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -50,8 +62,8 @@ function Home() {
         if (response.status === 401) {
           console.error('Unauthorized: Session expired')
           localStorage.clear()
-          alert('Your session has expired. Please log in again.')
-          navigate('/login')
+          showToast('Your session has expired. Please log in again.', 'error')
+          setTimeout(() => navigate('/login'), 1000)
           return
         }
         
@@ -65,6 +77,8 @@ function Home() {
         
         if (data.success && data.data.length > 0) {
           setActiveQueue(data.data[0])
+        } else {
+          setActiveQueue(null)
         }
       } catch (error) {
         console.error('Error fetching active queue:', error)
@@ -75,51 +89,56 @@ function Home() {
 
     fetchActiveQueue()
     
-    // Poll for updates every 10 seconds
-    const interval = setInterval(fetchActiveQueue, 10000)
-    return () => clearInterval(interval)
-  }, [userFromToken, navigate])
-
-  const formatWaitTime = (minutes) => {
-    if (minutes === 0) return 'Next in line!'
-    if (minutes < 60) return `${minutes} min`
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
-  }
+    // Set up WebSocket listener for queue updates
+    if (socket && isConnected && activeQueue?._id) {
+      socket.emit('join:queue', activeQueue._id)
+      
+      const handleQueueUpdate = (data) => {
+        if (data.queueId === activeQueue._id) {
+          setActiveQueue(prev => ({
+            ...prev,
+            position: data.position,
+            estimatedWait: data.estimatedWait,
+            status: data.status
+          }))
+          
+          // If queue is completed or cancelled, refetch to check for other active queues
+          if (data.status === 'completed' || data.status === 'cancelled') {
+            fetchActiveQueue()
+          }
+        }
+      }
+      
+      socket.on('queue:update', handleQueueUpdate)
+      
+      return () => {
+        socket.emit('leave:queue', activeQueue._id)
+        socket.off('queue:update', handleQueueUpdate)
+      }
+    }
+  }, [userFromToken, navigate, socket, isConnected, activeQueue?._id])
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
+    <div className="min-h-[90vh] flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
         </div>
-
-        <div className='flex items-start gap-2'>
-          <Link
-            to="/notifications"
-            aria-label="Notifications"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-[#462c9f] text-white text-sm font-medium hover:bg-[#3b237f] transition-colors"
-          >
-            Notifications
-          </Link>
-          <Link
-            to="/profile"
-            aria-label="Profile"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-[#462c9f] text-white text-sm font-medium hover:bg-[#3b237f] transition-colors"
-          >
-            Profile
-          </Link>
-        </div>
       </div>
       <div>
-        {/* Use userFromToken.name directly (already in JWT!) */}
         <h1 className="text-3xl text-left">
           Hello, {userFromToken?.name || "guest"}!
         </h1>
       </div>
 
-      {/* Active Queue Status */}
       {!loading && activeQueue && (
         <div className="max-w-md mx-auto w-full mb-4">
           <div className="bg-white rounded-lg shadow-md p-6 border-2 border-[#462c9f]">
@@ -173,14 +192,7 @@ function Home() {
           Facilities
         </Link>
       </div>
-      <div className="h-20 flex flex-col items-center justify-start">
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="mt-6 w-40 py-2 text-center bg-white border border-gray-200 rounded-md hover:bg-gray-100 transition"
-        >
-          Settings
-        </Link>
+      <div className="h-1 flex flex-col items-center justify-start">
       </div>
     </div>
   )

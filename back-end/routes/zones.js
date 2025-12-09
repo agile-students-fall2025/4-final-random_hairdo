@@ -1,7 +1,7 @@
 import express from 'express'
 import mongoose from 'mongoose'
 import { param, query, validationResult } from 'express-validator'
-import { Zone } from '../db.js'
+import { Zone, Queue } from '../db.js'
 
 const router = express.Router()
 
@@ -44,10 +44,29 @@ error: `No zones found for facility ID ${facilityId}`
 })
 }
 
+// Add real-time queue data to each zone
+const zonesWithQueueData = await Promise.all(
+zones.map(async (zone) => {
+const queueLength = await Queue.countDocuments({
+zoneId: zone._id,
+status: 'active'
+})
+
+// Calculate average wait time based on queue length
+const averageWaitTime = queueLength * 7 // 7 minutes per person
+
+return {
+...zone.toObject(),
+queueLength,
+averageWaitTime
+}
+})
+)
+
 res.json({
 success: true,
-data: zones,
-count: zones.length
+data: zonesWithQueueData,
+count: zonesWithQueueData.length
 })
 } catch (error) {
 res.status(500).json({

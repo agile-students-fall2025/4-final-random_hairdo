@@ -51,12 +51,20 @@ router.post('/', [
       })
     }
     
+    // Calculate actual position based on current queue length
+    const currentQueueCount = await Queue.countDocuments({
+      zoneId,
+      status: 'active'
+    })
+    const actualPosition = currentQueueCount + 1
+    const calculatedWait = actualPosition * 7 // 7 minutes per position
+    
     const newQueue = new Queue({
       userId,
       zoneId,
       facilityId: facilityId || null,
-      position: position || 1,
-      estimatedWait: estimatedWait || 10,
+      position: actualPosition,
+      estimatedWait: calculatedWait,
       status: 'active',
       joinedAt: new Date(),
       completedAt: null
@@ -67,19 +75,50 @@ router.post('/', [
     // Populate references for response
     await newQueue.populate(['userId', 'zoneId', 'facilityId'])
     
+    // Emit socket event for zone update
+    const io = req.app.get('io')
+    if (io) {
+      io.to(`zone:${zoneId}`).emit('zone:update', {
+        zoneId,
+        action: 'queue_joined',
+        queueLength: await Queue.countDocuments({ zoneId, status: 'active' })
+      })
+      
+      // Also emit to facility-zones room
+      if (facilityId) {
+        io.to(`facility-zones:${facilityId}`).emit('facility-zones:update', {
+          zoneId,
+          facilityId,
+          action: 'queue_joined'
+        })
+      }
+    }
+    
     // Create a notification for joining the queue
     try {
+      const notificationType = actualPosition === 1 ? 'queue_ready' : 'queue_update'
+      const notificationPriority = actualPosition === 1 ? 'high' : 'medium'
+      const notificationTitle = actualPosition === 1 ? "You're Next!" : 'Queue Joined'
+      const notificationMessage = actualPosition === 1 
+        ? `You're now #1 in the ${newQueue.zoneId.name} queue! Equipment is ready for you.`
+        : `You joined the ${newQueue.zoneId.name} queue at position #${actualPosition}. Estimated wait: ${calculatedWait} minutes`
+      
       const notification = new Notification({
         userId: userId,
-        type: 'queue_update',
-        title: 'Queue Joined',
-        message: `You joined the ${newQueue.zoneId.name} queue at position #${position}. Estimated wait: ${estimatedWait} minutes`,
+        type: notificationType,
+        title: notificationTitle,
+        message: notificationMessage,
         isRead: false,
-        priority: 'medium',
+        priority: notificationPriority,
         relatedId: newQueue._id,
         relatedType: 'queue'
       })
       await notification.save()
+      
+      // Emit real-time notification via Socket.IO
+      if (io) {
+        io.to(`notifications:${userId}`).emit('notification:new', notification)
+      }
     } catch (notifError) {
       console.error('Error creating notification:', notifError)
       // Don't fail the queue join if notification fails
@@ -279,6 +318,23 @@ router.put('/:id', [
     // Populate references for response
     await queue.populate(['userId', 'zoneId', 'facilityId'])
     
+    // Emit socket event for queue update
+    const io = req.app.get('io')
+    if (io) {
+      io.to(`queue:${req.params.id}`).emit('queue:update', {
+        queueId: req.params.id,
+        position: queue.position,
+        estimatedWait: queue.estimatedWait,
+        status: queue.status
+      })
+      
+      // Also emit to zone room
+      io.to(`zone:${queue.zoneId._id}`).emit('zone:update', {
+        zoneId: queue.zoneId._id,
+        action: 'queue_updated'
+      })
+    }
+    
     res.json({
       success: true,
       data: queue,
@@ -343,6 +399,13 @@ router.delete('/:id', [
     
     // Update positions for everyone behind in the same queue
     try {
+      const updatedQueues = await Queue.find({
+        zoneId: zoneId,
+        facilityId: facilityId,
+        status: 'active',
+        position: { $gt: leavingPosition }
+      })
+      
       await Queue.updateMany(
         {
           zoneId: zoneId,
@@ -354,6 +417,66 @@ router.delete('/:id', [
           $inc: { position: -1 }
         }
       )
+      
+      // Emit socket events for affected queues
+      const io = req.app.get('io')
+      if (io) {
+        // Notify each affected queue
+        for (const updatedQueue of updatedQueues) {
+          const newPosition = updatedQueue.position - 1
+          io.to(`queue:${updatedQueue._id}`).emit('queue:update', {
+            queueId: updatedQueue._id.toString(),
+            position: newPosition,
+            estimatedWait: newPosition * 7,
+            status: updatedQueue.status
+          })
+          
+          // Create notification if user reached position #1
+          if (newPosition === 1) {
+            try {
+              await updatedQueue.populate('zoneId')
+              const userIdString = updatedQueue.userId.toString()
+              
+              const notification = new Notification({
+                userId: updatedQueue.userId,
+                type: 'queue_ready',
+                title: "You're Next!",
+                message: `You're now #1 in the ${updatedQueue.zoneId.name} queue! Equipment is ready for you.`,
+                isRead: false,
+                priority: 'high',
+                relatedId: updatedQueue._id,
+                relatedType: 'queue'
+              })
+              
+              const savedNotification = await notification.save()
+              console.log('Position #1 notification saved:', savedNotification._id)
+              console.log('Emitting to room:', `notifications:${userIdString}`)
+              
+              // Emit notification via Socket.IO
+              io.to(`notifications:${userIdString}`).emit('notification:new', savedNotification.toObject())
+              console.log('Emitted position #1 notification to user:', userIdString)
+            } catch (notifError) {
+              console.error('Error creating position #1 notification:', notifError)
+            }
+          }
+        }
+        
+        // Notify zone about queue change
+        io.to(`zone:${zoneId}`).emit('zone:update', {
+          zoneId: zoneId.toString(),
+          action: 'queue_left',
+          queueLength: await Queue.countDocuments({ zoneId, status: 'active' })
+        })
+        
+        // Also emit to facility-zones room
+        if (facilityId) {
+          io.to(`facility-zones:${facilityId}`).emit('facility-zones:update', {
+            zoneId: zoneId.toString(),
+            facilityId: facilityId.toString(),
+            action: 'queue_left'
+          })
+        }
+      }
     } catch (updateError) {
       console.error('Error updating queue positions:', updateError)
       // Don't fail the delete if position update fails
