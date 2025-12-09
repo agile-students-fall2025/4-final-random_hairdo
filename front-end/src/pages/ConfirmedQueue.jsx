@@ -284,6 +284,7 @@ function ConfirmedQueue() {
       </div>
 
       {/* Queue Summary */}
+      <div className="flex-1 max-w-md">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6 max-w-md mx-auto">
         <h2 className="text-2xl font-bold mb-4">Queue Summary</h2>
 
@@ -372,6 +373,7 @@ function ConfirmedQueue() {
       <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-600">
         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
         <span>Real-time updates enabled</span>
+      </div>
       </div>
     </div>
   );
