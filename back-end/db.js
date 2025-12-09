@@ -176,6 +176,9 @@ const queueSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  startedAt: {
+    type: Date
+  },
   completedAt: {
     type: Date
   }
@@ -259,8 +262,10 @@ const historySchema = new mongoose.Schema({
   notes: {
     type: String
   },
-  caloriesBurned: {
-    type: Number
+  mood: {
+    type: Number,
+    min: 1,
+    max: 10
   }
 }, {
   timestamps: true
