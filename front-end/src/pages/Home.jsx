@@ -2,20 +2,26 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
 
+const formatWaitTime = (minutes) => {
+  if (minutes === 0) return 'Next in line!'
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+}
+
 function Home() {
   const navigate = useNavigate()
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Decode JWT to get user object
   const userFromToken = useMemo(() => {
     try {
       const token = localStorage.getItem('token')
       if (!token) return null
       
       const decoded = jwtDecode(token)
-      // Token payload is { user: { id, email, name } }
-      return decoded.user  // Return user object
+      return decoded.user
     } catch (error) {
       console.error('Error decoding token:', error)
       localStorage.removeItem('token')
@@ -23,7 +29,6 @@ function Home() {
     }
   }, [])
 
-  // Auth guard - redirect to login if no token
   useEffect(() => {
     if (!userFromToken?.id) {
       alert('Please log in to continue')
@@ -40,7 +45,6 @@ function Home() {
 
       try {
         const token = localStorage.getItem('token')
-        // Using relative URL 
         const response = await fetch(`/api/queues/user/${userFromToken.id}?status=active`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -75,51 +79,23 @@ function Home() {
 
     fetchActiveQueue()
     
-    // Poll for updates every 10 seconds
     const interval = setInterval(fetchActiveQueue, 10000)
     return () => clearInterval(interval)
   }, [userFromToken, navigate])
 
-  const formatWaitTime = (minutes) => {
-    if (minutes === 0) return 'Next in line!'
-    if (minutes < 60) return `${minutes} min`
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
-  }
-
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
+    <div className="min-h-[90vh] flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
         </div>
-
-        <div className='flex items-start gap-2'>
-          <Link
-            to="/notifications"
-            aria-label="Notifications"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-[#462c9f] text-white text-sm font-medium hover:bg-[#3b237f] transition-colors"
-          >
-            Notifications
-          </Link>
-          <Link
-            to="/profile"
-            aria-label="Profile"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-[#462c9f] text-white text-sm font-medium hover:bg-[#3b237f] transition-colors"
-          >
-            Profile
-          </Link>
-        </div>
       </div>
       <div>
-        {/* Use userFromToken.name directly (already in JWT!) */}
         <h1 className="text-3xl text-left">
           Hello, {userFromToken?.name || "guest"}!
         </h1>
       </div>
 
-      {/* Active Queue Status */}
       {!loading && activeQueue && (
         <div className="max-w-md mx-auto w-full mb-4">
           <div className="bg-white rounded-lg shadow-md p-6 border-2 border-[#462c9f]">
@@ -173,14 +149,7 @@ function Home() {
           Facilities
         </Link>
       </div>
-      <div className="h-20 flex flex-col items-center justify-start">
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="mt-6 w-40 py-2 text-center bg-white border border-gray-200 rounded-md hover:bg-gray-100 transition"
-        >
-          Settings
-        </Link>
+      <div className="h-1 flex flex-col items-center justify-start">
       </div>
     </div>
   )

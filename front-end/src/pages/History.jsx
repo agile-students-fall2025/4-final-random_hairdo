@@ -73,25 +73,23 @@ function History() {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#efefed] px-6 py-4">
-      {/* Header with Back Button and Logo */}
-      <div className="w-full flex items-start justify-between mb-12">
-        <div className="flex items-start">
-          <Link
-            to="/profile"
-            aria-label="Back to Profile"
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-black text-white text-sm font-medium hover:bg-[#462c9f] transition-colors"
-          >
-            Back to Profile Dashboard
-          </Link>
-        </div>
-
-        <div className="flex items-center">
-          <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
-        </div>
-      </div>
+      <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
+        <Link
+          to="/profile"
+          className="px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm hover:opacity-90"
+        >
+          Back to Profile
+        </Link>
+        <Link to="/">
+          <img src="/smartfit_logo.png" className="h-12 md:h-16" />
+        </Link>
+      </header>
 
       {/* Page Title - Centered */}
-      <h1 className="text-4xl font-normal text-center mb-8 text-[#282f3e]">History</h1>
+      <h1 className="text-4xl font-semibold mb-2">History</h1>
+      <p className="text-gray-600 mb-6">
+        Track your history.
+      </p>
 
       {/* Stats Summary (if available) */}
       {stats && (

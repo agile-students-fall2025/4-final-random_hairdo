@@ -2,6 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
+// API helper function - defined outside component to avoid recreation
+const api = async (path, opts = {}) => {
+  const token = localStorage.getItem('token')
+  const headers = {
+    ...(opts.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+  }
+  
+  const res = await fetch(path, {
+    method: opts.method || "GET",
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) {
+    throw new Error(data.error || data.message || res.statusText);
+  }
+  return data;
+}
+
+const btnPrimary =
+    "px-4 py-2 bg-[#462c9f] text-white rounded-md text-sm font-medium hover:bg-[#3b237f] transition";
+const btnSecondary =
+    "px-4 py-2 bg-gray-200 text-[#282f32] rounded-md text-sm font-medium hover:bg-gray-300 transition";
+
+
 export default function Notifications() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,33 +53,6 @@ export default function Notifications() {
       setUserId(userFromToken.id)
     }
   }, [userFromToken])
-
-  const btnDark =
-    "inline-flex px-4 py-2 rounded-lg bg-[#282f32] text-white text-sm font-medium hover:opacity-90 transition";
-  const btnPrimary =
-    "px-4 py-2 bg-[#462c9f] text-white rounded-md text-sm font-medium hover:bg-[#3b237f] transition";
-  const btnSecondary =
-    "px-4 py-2 bg-gray-200 text-[#282f32] rounded-md text-sm font-medium hover:bg-gray-300 transition";
-
-  // helper
-  async function api(path, opts = {}) {
-    const token = localStorage.getItem('token')
-    const headers = {
-      ...(opts.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { "Authorization": `Bearer ${token}` } : {})
-    }
-    
-    const res = await fetch(path, {
-      method: opts.method || "GET",
-      headers,
-      body: opts.body ? JSON.stringify(opts.body) : undefined,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.success === false) {
-      throw new Error(data.error || data.message || res.statusText);
-    }
-    return data;
-  }
 
   // initial load
   useEffect(() => {
@@ -107,20 +106,13 @@ export default function Notifications() {
   }
 
   return (
-    <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4">
+    <div className="min-h-[90vh] bg-[#efefed] text-[#282f32] px-6 py-4">
       {/* Header */}
-      <header className="mx-auto w-full max-w-md md:max-w-xl flex items-start justify-between">
-        <Link to="/settings" className={btnDark}>
-          Back to Settings
-        </Link>
-        <Link to="/" aria-label="Home">
-          <img
-            src="/smartfit_logo.png"
-            alt="SMARTFIT logo"
-            className="h-12 w-auto md:h-16"
-          />
-        </Link>
-      </header>
+      <div className="w-full flex items-start justify-between mb-8">
+        <div className="flex items-center">
+          <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />
+        </div>
+      </div>
 
       <main className="mx-auto w-full max-w-md md:max-w-xl">
         <h1 className="mt-6 text-4xl font-semibold">Notifications</h1>

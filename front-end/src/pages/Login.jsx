@@ -31,7 +31,7 @@ function Login() {
       localStorage.setItem('token', data.token)
 
       alert("Login successful!")
-      navigate("/profile")
+      navigate("/") // Redirect to Home after login
     } catch (err) {
       console.error(err)
       alert("Something went wrong connecting to server.")

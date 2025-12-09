@@ -14,28 +14,32 @@ import Notifications from './pages/Notifications'
 import ConfirmedQueue from './pages/ConfirmedQueue'
 import Support from './pages/Support'
 import Zone from './pages/Zone'
+import NavBar from './components/NavBar'
 
 function App() {
 
   return (
     <div className="app">
       <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/facility" element={<Facility />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/zone" element={<Zone />} />
-          <Route path="/confirmed-queue" element={<ConfirmedQueue />} />
-        </Routes>
+        <div className="pb-16">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/facility" element={<Facility />} />
+            <Route path="/goals" element={<Goals />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/zone" element={<Zone />} />
+            <Route path="/confirmed-queue" element={<ConfirmedQueue />} />
+          </Routes>
+        </div>
+        <NavBar />
       </Router>
     </div>
   )
