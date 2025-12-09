@@ -51,12 +51,20 @@ router.post('/', [
       })
     }
     
+    // Calculate actual position based on current queue length
+    const currentQueueCount = await Queue.countDocuments({
+      zoneId,
+      status: 'active'
+    })
+    const actualPosition = currentQueueCount + 1
+    const calculatedWait = actualPosition * 7 // 7 minutes per position
+    
     const newQueue = new Queue({
       userId,
       zoneId,
       facilityId: facilityId || null,
-      position: position || 1,
-      estimatedWait: estimatedWait || 10,
+      position: actualPosition,
+      estimatedWait: calculatedWait,
       status: 'active',
       joinedAt: new Date(),
       completedAt: null
@@ -66,6 +74,25 @@ router.post('/', [
     
     // Populate references for response
     await newQueue.populate(['userId', 'zoneId', 'facilityId'])
+    
+    // Emit socket event for zone update
+    const io = req.app.get('io')
+    if (io) {
+      io.to(`zone:${zoneId}`).emit('zone:update', {
+        zoneId,
+        action: 'queue_joined',
+        queueLength: await Queue.countDocuments({ zoneId, status: 'active' })
+      })
+      
+      // Also emit to facility-zones room
+      if (facilityId) {
+        io.to(`facility-zones:${facilityId}`).emit('facility-zones:update', {
+          zoneId,
+          facilityId,
+          action: 'queue_joined'
+        })
+      }
+    }
     
     // Create a notification for joining the queue
     try {
@@ -279,6 +306,23 @@ router.put('/:id', [
     // Populate references for response
     await queue.populate(['userId', 'zoneId', 'facilityId'])
     
+    // Emit socket event for queue update
+    const io = req.app.get('io')
+    if (io) {
+      io.to(`queue:${req.params.id}`).emit('queue:update', {
+        queueId: req.params.id,
+        position: queue.position,
+        estimatedWait: queue.estimatedWait,
+        status: queue.status
+      })
+      
+      // Also emit to zone room
+      io.to(`zone:${queue.zoneId._id}`).emit('zone:update', {
+        zoneId: queue.zoneId._id,
+        action: 'queue_updated'
+      })
+    }
+    
     res.json({
       success: true,
       data: queue,
@@ -343,6 +387,13 @@ router.delete('/:id', [
     
     // Update positions for everyone behind in the same queue
     try {
+      const updatedQueues = await Queue.find({
+        zoneId: zoneId,
+        facilityId: facilityId,
+        status: 'active',
+        position: { $gt: leavingPosition }
+      })
+      
       await Queue.updateMany(
         {
           zoneId: zoneId,
@@ -354,6 +405,37 @@ router.delete('/:id', [
           $inc: { position: -1 }
         }
       )
+      
+      // Emit socket events for affected queues
+      const io = req.app.get('io')
+      if (io) {
+        // Notify each affected queue
+        for (const updatedQueue of updatedQueues) {
+          const newPosition = updatedQueue.position - 1
+          io.to(`queue:${updatedQueue._id}`).emit('queue:update', {
+            queueId: updatedQueue._id.toString(),
+            position: newPosition,
+            estimatedWait: newPosition * 7,
+            status: updatedQueue.status
+          })
+        }
+        
+        // Notify zone about queue change
+        io.to(`zone:${zoneId}`).emit('zone:update', {
+          zoneId: zoneId.toString(),
+          action: 'queue_left',
+          queueLength: await Queue.countDocuments({ zoneId, status: 'active' })
+        })
+        
+        // Also emit to facility-zones room
+        if (facilityId) {
+          io.to(`facility-zones:${facilityId}`).emit('facility-zones:update', {
+            zoneId: zoneId.toString(),
+            facilityId: facilityId.toString(),
+            action: 'queue_left'
+          })
+        }
+      }
     } catch (updateError) {
       console.error('Error updating queue positions:', updateError)
       // Don't fail the delete if position update fails

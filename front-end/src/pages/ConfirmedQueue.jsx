@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { useSocket } from "../context/SocketContext";
 
 const btnPrimary =
     "w-1/2 px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition hover:cursor-pointer";
@@ -19,6 +20,7 @@ const formatWaitTime = (minutes) => {
 function ConfirmedQueue() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { socket, isConnected } = useSocket();
 
     //Extract facilityId from state
     const {
@@ -70,10 +72,26 @@ function ConfirmedQueue() {
         }
     }, [queueId, userFromToken, navigate]);
 
-    // Fetch queue updates from backend
+    // WebSocket connection for real-time queue updates
     useEffect(() => {
-        if (!queueId) return;
+        if (!queueId || !socket || !isConnected) return;
 
+        // Join the queue room
+        socket.emit("join:queue", queueId);
+        console.log("Joined queue room:", queueId);
+
+        // Listen for queue updates
+        const handleQueueUpdate = (data) => {
+            console.log("Queue update received:", data);
+            if (data.queueId === queueId) {
+                setCurrentPosition(data.position);
+                setEstimatedWait(data.estimatedWait);
+            }
+        };
+
+        socket.on("queue:update", handleQueueUpdate);
+
+        // Fetch initial queue status
         const fetchQueueStatus = async () => {
             try {
                 const token = localStorage.getItem("token");
@@ -109,14 +127,14 @@ function ConfirmedQueue() {
             }
         };
 
-        // Fetch immediately
         fetchQueueStatus();
 
-        // Poll for updates every 10 seconds
-        const interval = setInterval(fetchQueueStatus, 10000);
-
-        return () => clearInterval(interval);
-    }, [queueId, navigate]);
+        // Cleanup
+        return () => {
+            socket.emit("leave:queue", queueId);
+            socket.off("queue:update", handleQueueUpdate);
+        };
+    }, [queueId, socket, isConnected, navigate]);
 
     // Handle leave queue
     const handleLeaveQueue = async () => {

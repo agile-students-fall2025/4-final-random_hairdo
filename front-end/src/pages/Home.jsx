@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
+import { useSocket } from '../context/SocketContext'
 
 const formatWaitTime = (minutes) => {
   if (minutes === 0) return 'Next in line!'
@@ -12,6 +13,7 @@ const formatWaitTime = (minutes) => {
 
 function Home() {
   const navigate = useNavigate()
+  const { socket, isConnected } = useSocket()
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -69,6 +71,8 @@ function Home() {
         
         if (data.success && data.data.length > 0) {
           setActiveQueue(data.data[0])
+        } else {
+          setActiveQueue(null)
         }
       } catch (error) {
         console.error('Error fetching active queue:', error)
@@ -79,9 +83,34 @@ function Home() {
 
     fetchActiveQueue()
     
-    const interval = setInterval(fetchActiveQueue, 10000)
-    return () => clearInterval(interval)
-  }, [userFromToken, navigate])
+    // Set up WebSocket listener for queue updates
+    if (socket && isConnected && activeQueue?._id) {
+      socket.emit('join:queue', activeQueue._id)
+      
+      const handleQueueUpdate = (data) => {
+        if (data.queueId === activeQueue._id) {
+          setActiveQueue(prev => ({
+            ...prev,
+            position: data.position,
+            estimatedWait: data.estimatedWait,
+            status: data.status
+          }))
+          
+          // If queue is completed or cancelled, refetch to check for other active queues
+          if (data.status === 'completed' || data.status === 'cancelled') {
+            fetchActiveQueue()
+          }
+        }
+      }
+      
+      socket.on('queue:update', handleQueueUpdate)
+      
+      return () => {
+        socket.emit('leave:queue', activeQueue._id)
+        socket.off('queue:update', handleQueueUpdate)
+      }
+    }
+  }, [userFromToken, navigate, socket, isConnected, activeQueue?._id])
 
   return (
     <div className="min-h-[90vh] flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">

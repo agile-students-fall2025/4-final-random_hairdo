@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { useSocket } from "../context/SocketContext";
 
 // Shared button styles
 const btnPrimary =
@@ -33,6 +34,7 @@ function Zone() {
     const navigate = useNavigate();
     const location = useLocation();
     const facilityId = location.state?.facilityId;
+    const { socket, isConnected } = useSocket();
 
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -99,6 +101,42 @@ function Zone() {
 
         fetchZones();
     }, [facilityId]);
+
+    // WebSocket connection for real-time zone updates
+    useEffect(() => {
+        if (!facilityId || !socket || !isConnected) return;
+
+        // Join the facility-zones room to get updates for all zones
+        socket.emit("join:facility-zones", facilityId);
+        console.log("Joined facility-zones room:", facilityId);
+
+        // Listen for zone updates
+        const handleFacilityZonesUpdate = async (data) => {
+            console.log("Facility zones update received:", data);
+            
+            // Refetch zones data to get updated queue lengths
+            try {
+                const response = await fetch(
+                    `/api/zones?facilityId=${facilityId}`
+                );
+                const zonesData = await response.json();
+
+                if (zonesData.success) {
+                    setZones(zonesData.data);
+                }
+            } catch (err) {
+                console.error("Error refetching zones:", err);
+            }
+        };
+
+        socket.on("facility-zones:update", handleFacilityZonesUpdate);
+
+        // Cleanup
+        return () => {
+            socket.emit("leave:facility-zones", facilityId);
+            socket.off("facility-zones:update", handleFacilityZonesUpdate);
+        };
+    }, [facilityId, socket, isConnected]);
 
     const handleJoinQueue = (zone) => {
         if (selectedZone?._id === zone._id) {
@@ -229,7 +267,7 @@ function Zone() {
                                     <p>
                                         Queue Length:{" "}
                                         <span className="font-semibold">
-                                            {zone.queueLength} people
+                                            {zone.queueLength} {zone.queueLength === 1 ? "person" : "people"}
                                         </span>
                                     </p>
                                     <p>
