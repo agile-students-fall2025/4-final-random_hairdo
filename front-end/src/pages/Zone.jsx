@@ -116,17 +116,11 @@ function Zone() {
         socket.emit("join:facility-zones", facilityId);
         //console.log("Joined facility-zones room:", facilityId);
 
-        // Listen for zone updates
-        const handleFacilityZonesUpdate = async (data) => {
-            //console.log("Facility zones update received:", data);
-            
-            // Refetch zones data to get updated queue lengths
+        const handleFacilityZonesUpdate = async () => {
             try {
-                const response = await fetch(
-                    `/api/zones?facilityId=${facilityId}`
-                );
+                const response = await fetch(`/api/zones?facilityId=${facilityId}`);
                 const zonesData = await response.json();
-
+        
                 if (zonesData.success) {
                     setZones(zonesData.data);
                 }
@@ -134,6 +128,7 @@ function Zone() {
                 console.error("Error refetching zones:", err);
             }
         };
+
 
         socket.on("facility-zones:update", handleFacilityZonesUpdate);
 
