@@ -57,6 +57,18 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} left facility-zones:${facilityId}`)
   })
 
+  // Join notifications room for a user
+  socket.on('join:notifications', (userId) => {
+    socket.join(`notifications:${userId}`)
+    console.log(`Socket ${socket.id} joined notifications:${userId}`)
+  })
+
+  // Leave notifications room
+  socket.on('leave:notifications', (userId) => {
+    socket.leave(`notifications:${userId}`)
+    console.log(`Socket ${socket.id} left notifications:${userId}`)
+  })
+
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`)
   })

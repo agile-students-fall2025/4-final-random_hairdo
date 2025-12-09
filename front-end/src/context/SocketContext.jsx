@@ -23,12 +23,12 @@ export const SocketProvider = ({ children }) => {
         });
 
         socketInstance.on("connect", () => {
-            console.log("WebSocket connected:", socketInstance.id);
+            //console.log("WebSocket connected:", socketInstance.id);
             setIsConnected(true);
         });
 
         socketInstance.on("disconnect", () => {
-            console.log("WebSocket disconnected");
+            //console.log("WebSocket disconnected");
             setIsConnected(false);
         });
 

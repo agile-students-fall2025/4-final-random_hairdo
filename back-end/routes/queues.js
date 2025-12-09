@@ -96,17 +96,29 @@ router.post('/', [
     
     // Create a notification for joining the queue
     try {
+      const notificationType = actualPosition === 1 ? 'queue_ready' : 'queue_update'
+      const notificationPriority = actualPosition === 1 ? 'high' : 'medium'
+      const notificationTitle = actualPosition === 1 ? "You're Next!" : 'Queue Joined'
+      const notificationMessage = actualPosition === 1 
+        ? `You're now #1 in the ${newQueue.zoneId.name} queue! Equipment is ready for you.`
+        : `You joined the ${newQueue.zoneId.name} queue at position #${actualPosition}. Estimated wait: ${calculatedWait} minutes`
+      
       const notification = new Notification({
         userId: userId,
-        type: 'queue_update',
-        title: 'Queue Joined',
-        message: `You joined the ${newQueue.zoneId.name} queue at position #${position}. Estimated wait: ${estimatedWait} minutes`,
+        type: notificationType,
+        title: notificationTitle,
+        message: notificationMessage,
         isRead: false,
-        priority: 'medium',
+        priority: notificationPriority,
         relatedId: newQueue._id,
         relatedType: 'queue'
       })
       await notification.save()
+      
+      // Emit real-time notification via Socket.IO
+      if (io) {
+        io.to(`notifications:${userId}`).emit('notification:new', notification)
+      }
     } catch (notifError) {
       console.error('Error creating notification:', notifError)
       // Don't fail the queue join if notification fails
@@ -418,6 +430,35 @@ router.delete('/:id', [
             estimatedWait: newPosition * 7,
             status: updatedQueue.status
           })
+          
+          // Create notification if user reached position #1
+          if (newPosition === 1) {
+            try {
+              await updatedQueue.populate('zoneId')
+              const userIdString = updatedQueue.userId.toString()
+              
+              const notification = new Notification({
+                userId: updatedQueue.userId,
+                type: 'queue_ready',
+                title: "You're Next!",
+                message: `You're now #1 in the ${updatedQueue.zoneId.name} queue! Equipment is ready for you.`,
+                isRead: false,
+                priority: 'high',
+                relatedId: updatedQueue._id,
+                relatedType: 'queue'
+              })
+              
+              const savedNotification = await notification.save()
+              console.log('Position #1 notification saved:', savedNotification._id)
+              console.log('Emitting to room:', `notifications:${userIdString}`)
+              
+              // Emit notification via Socket.IO
+              io.to(`notifications:${userIdString}`).emit('notification:new', savedNotification.toObject())
+              console.log('Emitted position #1 notification to user:', userIdString)
+            } catch (notifError) {
+              console.error('Error creating position #1 notification:', notifError)
+            }
+          }
         }
         
         // Notify zone about queue change

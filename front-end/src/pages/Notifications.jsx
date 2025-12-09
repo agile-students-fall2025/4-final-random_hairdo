@@ -33,6 +33,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [userId, setUserId] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Get user ID from JWT token
   const userFromToken = useMemo(() => {
@@ -51,6 +52,16 @@ export default function Notifications() {
   useEffect(() => {
     if (userFromToken?.id) {
       setUserId(userFromToken.id)
+    } else if (userFromToken?.userId) {
+      setUserId(userFromToken.userId)
+    } else if (userFromToken?.user?.id) {
+      setUserId(userFromToken.user.id)
+    } else {
+      console.log('No user ID found in token:', userFromToken)
+      if (userFromToken) {
+        setErr('Unable to identify user. Please log in again.')
+        setLoading(false)
+      }
     }
   }, [userFromToken])
 
@@ -98,15 +109,51 @@ export default function Notifications() {
     }
   }
 
-  // Clear all (UI only for now)
+  // Clear all (delete all notifications)
   function clearAll() {
-    if (window.confirm("Are you sure you want to clear all notifications?")) {
+    setShowConfirm(true);
+  }
+
+  async function confirmClearAll() {
+    setShowConfirm(false);
+    if (!userId) return;
+    
+    try {
+      await api(`/api/notifications/user/${userId}`, { method: "DELETE" });
       setItems([]);
+    } catch (e) {
+      alert(`Could not clear notifications: ${e.message}`);
     }
   }
 
   return (
     <div className="min-h-[90vh] bg-[#efefed] text-[#282f32] px-6 py-4">
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-xl font-bold mb-4">Clear All Notifications?</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to clear all notifications? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearAll}
+                className="flex-1 px-4 py-2 rounded-lg bg-[#462c9f] text-white font-semibold hover:bg-[#3b237f]"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="w-full flex items-start justify-between mb-8">
         <div className="flex items-center">
@@ -139,7 +186,7 @@ export default function Notifications() {
           </div>
 
           {/* Notification list */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-[50vh] overflow-y-auto">
             {loading ? (
               <div className="p-6 text-center text-sm text-gray-500">
                 Loading…
