@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useSocket } from "../context/SocketContext";
+import Toast from "../components/Toast";
 
 const btnPrimary =
     "w-1/2 px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition hover:cursor-pointer";
@@ -42,6 +43,12 @@ function ConfirmedQueue() {
         initialWait || zone.averageWaitTime || 0
     );
     const [error, setError] = useState(null);
+    const [toast, setToast] = useState(null);
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    const showToast = (message, type = "info") => {
+        setToast({ message, type });
+    };
 
     // Decode JWT to get user object
     const userFromToken = useMemo(() => {
@@ -60,8 +67,8 @@ function ConfirmedQueue() {
     // Auth guard - redirect if not logged in
     useEffect(() => {
         if (!userFromToken) {
-            alert("Please log in to view your queue");
-            navigate("/login");
+            showToast("Please log in to view your queue", "warning");
+            setTimeout(() => navigate("/login"), 1000);
         }
     }, [userFromToken, navigate]);
 
@@ -78,11 +85,11 @@ function ConfirmedQueue() {
 
         // Join the queue room
         socket.emit("join:queue", queueId);
-        console.log("Joined queue room:", queueId);
+        //console.log("Joined queue room:", queueId);
 
         // Listen for queue updates
         const handleQueueUpdate = (data) => {
-            console.log("Queue update received:", data);
+            //console.log("Queue update received:", data);
             if (data.queueId === queueId) {
                 setCurrentPosition(data.position);
                 setEstimatedWait(data.estimatedWait);
@@ -104,14 +111,14 @@ function ConfirmedQueue() {
 
                 if (response.status === 401) {
                     localStorage.clear();
-                    alert("Your session has expired. Please log in again.");
-                    navigate("/login");
+                    showToast("Your session has expired. Please log in again.", "error");
+                    setTimeout(() => navigate("/login"), 1000);
                     return;
                 }
 
                 if (response.status === 403) {
-                    alert("You are not authorized to view this queue.");
-                    navigate("/facility");
+                    showToast("You are not authorized to view this queue.", "error");
+                    setTimeout(() => navigate("/facility"), 1000);
                     return;
                 }
 
@@ -137,11 +144,14 @@ function ConfirmedQueue() {
     }, [queueId, socket, isConnected, navigate]);
 
     // Handle leave queue
-    const handleLeaveQueue = async () => {
+    const handleLeaveQueue = () => {
         if (!queueId) return;
+        setShowConfirm(true);
+    };
 
-        if (!confirm("Are you sure you want to leave the queue?")) return;
-
+    const confirmLeaveQueue = async () => {
+        setShowConfirm(false);
+        
         try {
             const token = localStorage.getItem("token");
             const response = await fetch(`/api/queues/${queueId}`, {
@@ -153,27 +163,27 @@ function ConfirmedQueue() {
 
             if (response.status === 401) {
                 localStorage.clear();
-                alert("Your session has expired. Please log in again.");
-                navigate("/login");
+                showToast("Your session has expired. Please log in again.", "error");
+                setTimeout(() => navigate("/login"), 1000);
                 return;
             }
 
             if (response.status === 403) {
-                alert("You are not authorized to leave this queue.");
+                showToast("You are not authorized to leave this queue.", "error");
                 return;
             }
 
             const data = await response.json();
 
             if (data.success) {
-                alert("Successfully left the queue");
-                navigate("/facility");
+                showToast("Successfully left the queue", "success");
+                setTimeout(() => navigate("/facility"), 1000);
             } else {
-                alert(data.error || "Failed to leave queue");
+                showToast(data.error || "Failed to leave queue", "error");
             }
         } catch (err) {
             console.error("Error leaving queue:", err);
-            alert("Failed to leave queue. Please try again.");
+            showToast("Failed to leave queue. Please try again.", "error");
         }
     };
 
@@ -190,6 +200,39 @@ function ConfirmedQueue() {
 
     return (
         <div className="min-h-[90vh] flex flex-col bg-[#efefed] px-6 py-4">
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+            
+            {showConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+                        <h3 className="text-xl font-bold mb-4">Leave Queue?</h3>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to leave the queue?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowConfirm(false)}
+                                className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmLeaveQueue}
+                                className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600"
+                            >
+                                Leave
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div className="w-full flex items-start justify-between mb-8">
                 <div className="flex items-start">
                     <Link

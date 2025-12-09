@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Toast from "../components/Toast";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -11,8 +12,13 @@ function Register() {
   const [serverError, setServerError] = useState("");
   const [isFormValid, setIsFormValid] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const navigate = useNavigate();
+
+  const showToast = (message, type = "info") => {
+    setToast({ message, type });
+  };
 
   // verify nyu email format
   const isNyuEmail = (value) =>
@@ -81,9 +87,8 @@ function Register() {
         localStorage.setItem("user", JSON.stringify(data.user));
       }
 
-      // You can skip the alert if you want, but it’s clear UX
-      alert("Registration successful!");
-      navigate("/login");
+      showToast("Registration successful!", "success");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       console.error(err);
       setServerError("Server error. Please try again later.");
@@ -103,6 +108,14 @@ function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#efefed] text-[#282f32]">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="w-full max-w-md p-8 space-y-6">
         <div className="flex justify-center">
           <img src="/smartfit_logo.png" alt="Logo" className="w-70 h-auto" />

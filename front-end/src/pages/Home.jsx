@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import { useSocket } from '../context/SocketContext'
+import Toast from '../components/Toast'
 
 const formatWaitTime = (minutes) => {
   if (minutes === 0) return 'Next in line!'
@@ -16,6 +17,11 @@ function Home() {
   const { socket, isConnected } = useSocket()
   const [activeQueue, setActiveQueue] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type })
+  }
 
   const userFromToken = useMemo(() => {
     try {
@@ -33,8 +39,8 @@ function Home() {
 
   useEffect(() => {
     if (!userFromToken?.id) {
-      alert('Please log in to continue')
-      navigate('/login')
+      showToast('Please log in to continue', 'warning')
+      setTimeout(() => navigate('/login'), 1000)
     }
   }, [userFromToken, navigate])
   
@@ -56,8 +62,8 @@ function Home() {
         if (response.status === 401) {
           console.error('Unauthorized: Session expired')
           localStorage.clear()
-          alert('Your session has expired. Please log in again.')
-          navigate('/login')
+          showToast('Your session has expired. Please log in again.', 'error')
+          setTimeout(() => navigate('/login'), 1000)
           return
         }
         
@@ -114,6 +120,14 @@ function Home() {
 
   return (
     <div className="min-h-[90vh] flex flex-col justify-between bg-[#efefed] px-6 py-4 text-[#282f32]">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           <img src="/smartfit_logo.png" alt="Logo" className="h-20 w-auto" />

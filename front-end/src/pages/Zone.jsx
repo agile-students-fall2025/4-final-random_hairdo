@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useSocket } from "../context/SocketContext";
+import Toast from "../components/Toast";
 
 // Shared button styles
 const btnPrimary =
@@ -40,6 +41,11 @@ function Zone() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedZone, setSelectedZone] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (message, type = "info") => {
+        setToast({ message, type });
+    };
 
     // Decode JWT to get user object
     const userFromToken = useMemo(() => {
@@ -58,8 +64,8 @@ function Zone() {
     // Auth guard - redirect if not logged in
     useEffect(() => {
         if (!userFromToken) {
-            alert("Please log in to view zones");
-            navigate("/login");
+            showToast("Please log in to view zones", "warning");
+            setTimeout(() => navigate("/login"), 1000);
         }
     }, [userFromToken, navigate]);
 
@@ -108,11 +114,11 @@ function Zone() {
 
         // Join the facility-zones room to get updates for all zones
         socket.emit("join:facility-zones", facilityId);
-        console.log("Joined facility-zones room:", facilityId);
+        //console.log("Joined facility-zones room:", facilityId);
 
         // Listen for zone updates
         const handleFacilityZonesUpdate = async (data) => {
-            console.log("Facility zones update received:", data);
+            //console.log("Facility zones update received:", data);
             
             // Refetch zones data to get updated queue lengths
             try {
@@ -154,8 +160,8 @@ function Zone() {
             const token = localStorage.getItem("token");
 
             if (!token || !userFromToken?.id) {
-                alert("Please log in to join a queue");
-                navigate("/login");
+                showToast("Please log in to join a queue", "warning");
+                setTimeout(() => navigate("/login"), 1000);
                 return;
             }
 
@@ -189,16 +195,23 @@ function Zone() {
                     },
                 });
             } else {
-                alert(data.error || "Failed to join queue");
+                showToast(data.error || "Failed to join queue", "error");
             }
         } catch (error) {
             console.error("Error joining queue:", error);
-            alert("Failed to join queue. Please try again.");
+            showToast("Failed to join queue. Please try again.", "error");
         }
     };
 
     return (
         <div className="min-h-[90vh] flex flex-col bg-[#efefed] px-6 py-4">
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
             <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
                 <Link
                     to="/facility"
