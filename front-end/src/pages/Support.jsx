@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import getApiUrl from "../utils/api";
+import Toast from "../components/Toast";
 
 // Shared styles
 const btnPrimary =
@@ -45,10 +46,14 @@ export default function Support() {
 
   const [open, setOpen] = useState(null);
   const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
   const [faqs, setFaqs] = useState([]);
   const [loadingFaqs, setLoadingFaqs] = useState(true);
   const [faqError, setFaqError] = useState("");
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "info") => {
+    setToast({ message, type });
+  };
 
   const toggle = (idx) => setOpen((prev) => (prev === idx ? null : idx));
 
@@ -96,14 +101,13 @@ export default function Support() {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) {
-      alert("Please enter a message before submitting.");
+      showToast("Please enter a message before submitting.", "warning");
       return;
     }
 
     if (!isAuthed || !userId) {
-      // up to you: redirect or just show alert
-      alert("You must be logged in to submit a support issue.");
-      navigate("/login");
+      showToast("You must be logged in to submit a support issue.", "error");
+      setTimeout(() => navigate("/login"), 1500);
       return;
     }
 
@@ -118,16 +122,22 @@ export default function Support() {
           priority: "medium",
         },
       });
-      setSubmitted(true);
+      showToast("Thank you! Your message has been sent. Our team will get back to you soon.", "success");
       setMessage("");
-      setTimeout(() => setSubmitted(false), 3000);
     } catch (err) {
-      alert(`Could not submit: ${err.message}`);
+      showToast(`Could not submit: ${err.message}`, "error");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#efefed] text-[#282f32] px-6 py-4">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       {/* Header */}
       <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
         <Link
@@ -218,13 +228,6 @@ export default function Support() {
               </button>
             </div>
           </form>
-
-          {submitted && (
-            <div className="mt-4 px-4 py-3 bg-green-100 text-green-700 border border-green-300 rounded-lg text-center text-sm font-medium">
-              ✅ Thank you! Your message has been sent. Our team will get back
-              to you soon.
-            </div>
-          )}
         </section>
       </main>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 import getApiUrl from '../utils/api'
+import Toast from '../components/Toast'
 
 function EditProfile() {
   const navigate = useNavigate()
@@ -20,12 +21,17 @@ function EditProfile() {
 
   const [loading, setLoading] = useState(true)
   const [tagInput, setTagInput] = useState('')  // Changed from goalInput
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type })
+  }
 
   // Auth guard
   useEffect(() => {
     if (!token || !userId) {
-      alert('Please log in to edit your profile')
-      navigate('/login')
+      showToast('Please log in to edit your profile', 'error')
+      setTimeout(() => navigate('/login'), 1500)
     }
   }, [token, userId, navigate])
 
@@ -45,15 +51,15 @@ function EditProfile() {
         // Handle 401 errors
         if (res.status === 401) {
           localStorage.clear()
-          alert('Your session has expired. Please log in again.')
-          navigate('/login')
+          showToast('Your session has expired. Please log in again.', 'error')
+          setTimeout(() => navigate('/login'), 1500)
           throw new Error('Unauthorized')
         }
         return res.json()
       })
       .then((data) => {
         if (!data.success) {
-          alert('Failed to load profile')
+          showToast('Failed to load profile', 'error')
           return
         }
         
@@ -69,7 +75,7 @@ function EditProfile() {
       .catch((err) => {
         console.error(err)
         if (err.message !== 'Unauthorized') {
-          alert('Failed to load profile')
+          showToast('Failed to load profile', 'error')
         }
         setLoading(false)
       })
@@ -90,7 +96,7 @@ function EditProfile() {
     
     // Check if already at max
     if (formData.focusTags.length >= 3) {
-      alert('Maximum 3 focus tags allowed')
+      showToast('Maximum 3 focus tags allowed', 'warning')
       return
     }
     
@@ -127,23 +133,23 @@ function EditProfile() {
       // Handle 401 errors on update
       if (res.status === 401) {
         localStorage.clear()
-        alert('Your session has expired. Please log in again.')
-        navigate('/login')
+        showToast('Your session has expired. Please log in again.', 'error')
+        setTimeout(() => navigate('/login'), 1500)
         return
       }
       
       const data = await res.json()
       
       if (!res.ok) {
-        alert(data.message || 'Update failed')
+        showToast(data.message || 'Update failed', 'error')
         return
       }
       
-      alert('Profile updated successfully!')
-      navigate('/profile')
+      showToast('Profile updated successfully!', 'success')
+      setTimeout(() => navigate('/profile'), 1500)
     } catch (err) {
       console.error(err)
-      alert('Something went wrong connecting to server.')
+      showToast('Something went wrong connecting to server.', 'error')
     }
   }
 
@@ -158,6 +164,13 @@ function EditProfile() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#efefed] px-6 py-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
         <Link
           to="/settings"
