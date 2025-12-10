@@ -97,7 +97,7 @@ function Home() {
           fetch(getApiUrl(`/api/queues/user/${userId}?status=active`), {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          fetch(`/api/history/user/${userId}`, {
+          fetch(getApiUrl(`/api/history/user/${userId}`), {
             headers: { Authorization: `Bearer ${token}` }
           })
         ])
