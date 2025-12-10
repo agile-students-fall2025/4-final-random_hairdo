@@ -18,6 +18,7 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         // Connect to WebSocket server
         const socketInstance = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+            path: "/socket.io",
             transports: ["websocket", "polling"],
             autoConnect: true,
         });
