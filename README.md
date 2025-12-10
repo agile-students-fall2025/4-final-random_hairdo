@@ -34,7 +34,7 @@ Campus fitness centers like the ones at NYU face unpredictable crowding that dis
 |------|--------|------|
 | Matthew Membreno | [@m9membreno](https://github.com/m9membreno) | Backend Developer |
 | Andrew Park | [@Toudles](https://github.com/Toudles) | Frontend Developer |
-| Sarya Sadi | [@saryasadi](https://github.com/saryasadi) | Frontend Developer |
+| Sarya Sadi | [@saryasadi](https://github.com/saryasadi) | |
 | Yi Fei | [@yeefeizhao](https://github.com/yeefeizhao) | Product Owner |
 | Ahmed Arkam | [@am13367](https://github.com/am13367) | Scrum Master |
 
