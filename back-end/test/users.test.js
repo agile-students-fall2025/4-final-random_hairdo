@@ -22,7 +22,7 @@ describe('Users API Tests - Sprint 3', () => {
     this.timeout(10000)
     
     // Use TEST database (not production!)
-    const testDbUri = process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/smartfit_test'
+    const testDbUri = process.env.MONGODB_TEST_URI || 'mongodb+srv://db_user:8GCeLYMHSQGczvty@cluster0.t8py52w.mongodb.net/smartfit_test'
     
     // Close existing connection if any
     if (mongoose.connection.readyState !== 0) {
