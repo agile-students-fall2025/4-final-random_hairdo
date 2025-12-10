@@ -90,7 +90,7 @@ function Home() {
         const userId = userFromToken.id
 
         // Fetch in_use and active queues separately
-        const [inUseRes, activeRes] = await Promise.all([
+        const [inUseRes, activeRes, historyRes] = await Promise.all([
           fetch(getApiUrl(`/api/queues/user/${userId}?status=in_use`), {
             headers: { Authorization: `Bearer ${token}` }
           }),
