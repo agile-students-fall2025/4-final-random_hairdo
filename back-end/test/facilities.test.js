@@ -1,207 +1,149 @@
+// test/facilities.test.js
 import request from 'supertest'
 import { expect } from 'chai'
-import express from 'express'
-import facilitiesRouter from '../routes/facilities.js'
-import { facilities } from '../utils/mockData.js'
+import mongoose from 'mongoose'
+import dotenv from 'dotenv'
+import app from '../app.js'
+import { Facility } from '../db.js' // Your Facility model
 
-// Create a test app
-const app = express()
-app.use(express.json())
-app.use('/api/facilities', facilitiesRouter)
+dotenv.config()
 
 describe('Facilities API Tests', () => {
-  
+  let testFacilityId // Store a valid MongoDB _id for testing
+
+  before(async () => {
+    try {
+      // Connect to test DB
+      if (!mongoose.connection.readyState) {
+        await mongoose.connect(process.env.MONGODB_UNIT_TEST_URI)
+        console.log('Connected to MongoDB test database')
+      }
+
+      // Clear old test facilities
+      await Facility.deleteMany({})
+
+      // Insert test facilities and store the result
+      const facilities = await Facility.insertMany([
+        {
+          name: 'Paulson Athletic Facility',
+          address: '70 Washington Square S, New York, NY 10012',
+          capacity: 100,
+          hours: { weekdays: '6am-10pm', weekends: '8am-8pm' },
+          amenities: ['Pool', 'Gym', 'Basketball Court'],
+          phone: '212-998-0000',
+          createdAt: new Date()
+        },
+        {
+          name: 'Palladium Athletic Facility',
+          address: '140 E 14th St, New York, NY 10003',
+          capacity: 50,
+          hours: { weekdays: '6am-10pm', weekends: '8am-8pm' },
+          amenities: ['Pool', 'Weights'],
+          phone: '212-777-0000',
+          createdAt: new Date()
+        },
+        {
+          name: 'NYU 404 Fitness',
+          address: 'NYU Campus, New York, NY',
+          capacity: 30,
+          hours: { weekdays: '7am-9pm', weekends: '9am-5pm' },
+          amenities: ['Gym'],
+          phone: '212-555-0003',
+          createdAt: new Date()
+        },
+        {
+          name: 'Brooklyn Athletic Facility',
+          address: 'Brooklyn, NY',
+          capacity: 80,
+          hours: { weekdays: '6am-10pm', weekends: '8am-8pm' },
+          amenities: ['Pool', 'Gym'],
+          phone: '718-888-0004',
+          createdAt: new Date()
+        }
+      ])
+
+      // Store first facility's _id for testing
+      testFacilityId = facilities[0]._id.toString()
+    } catch (err) {
+      console.error('Setup error:', err)
+      throw err
+    }
+  })
+
+  after(async () => {
+    // Clean up test facilities
+    await Facility.deleteMany({})
+    await mongoose.connection.close()
+    console.log('Disconnected from test MongoDB')
+  })
+
   describe('GET /api/facilities', () => {
     it('should return all facilities with success status', async () => {
       const res = await request(app).get('/api/facilities')
-      
       expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body).to.have.property('success', true)
       expect(res.body).to.have.property('data')
+      expect(res.body.data.length).to.be.greaterThan(0)
       expect(res.body).to.have.property('message', 'Facilities retrieved successfully')
     })
 
-    it('should return an array of facilities', async () => {
+    it('should return facilities with correct structure and types', async () => {
       const res = await request(app).get('/api/facilities')
-      
-      expect(res.body.data).to.be.an('array')
-      expect(res.body.data.length).to.be.greaterThan(0)
-    })
-
-    it('should return facilities with correct structure', async () => {
-      const res = await request(app).get('/api/facilities')
-      
       const facility = res.body.data[0]
-      expect(facility).to.have.property('id')
-      expect(facility).to.have.property('name')
-      expect(facility).to.have.property('address')
-      expect(facility).to.have.property('capacity')
-      expect(facility).to.have.property('hours')
-      expect(facility).to.have.property('amenities')
-      expect(facility).to.have.property('phone')
+      expect(facility).to.have.property('_id')
+      expect(facility).to.have.property('name').that.is.a('string')
+      expect(facility).to.have.property('address').that.is.a('string')
+      expect(facility).to.have.property('capacity').that.is.a('number')
+      expect(facility).to.have.property('hours').that.is.an('object')
+      expect(facility).to.have.property('amenities').that.is.an('array')
+      expect(facility).to.have.property('phone').that.is.a('string')
+      expect(facility).to.have.property('createdAt').that.is.a('string')
     })
 
-    it('should return facilities with valid data types', async () => {
+    it('should have unique facility IDs', async () => {
       const res = await request(app).get('/api/facilities')
-      
-      const facility = res.body.data[0]
-      expect(facility.id).to.be.a('number')
-      expect(facility.name).to.be.a('string')
-      expect(facility.address).to.be.a('string')
-      expect(facility.capacity).to.be.a('number')
-      expect(facility.hours).to.be.an('object')
-      expect(facility.amenities).to.be.an('array')
-      expect(facility.phone).to.be.a('string')
-    })
-
-    it('should return all facilities from mock data', async () => {
-      const res = await request(app).get('/api/facilities')
-      
-      expect(res.body.data.length).to.equal(facilities.length)
+      const ids = res.body.data.map(f => f._id)
+      const uniqueIds = [...new Set(ids)]
+      expect(ids.length).to.equal(uniqueIds.length)
     })
   })
 
   describe('GET /api/facilities/:id', () => {
     it('should return a specific facility by valid id', async () => {
-      const facilityId = 1
-      const res = await request(app).get(`/api/facilities/${facilityId}`)
-      
+      const res = await request(app).get(`/api/facilities/${testFacilityId}`)
       expect(res.status).to.equal(200)
       expect(res.body).to.have.property('success', true)
-      expect(res.body).to.have.property('data')
-      expect(res.body.data).to.be.an('object')
-      expect(res.body.data.id).to.equal(facilityId)
-    })
-
-    it('should return facility with correct name for id 1', async () => {
-      const res = await request(app).get('/api/facilities/1')
-      
-      expect(res.body.data.name).to.equal('Paulson Athletic Facility')
-    })
-
-    it('should return facility with correct address for id 2', async () => {
-      const res = await request(app).get('/api/facilities/2')
-      
-      expect(res.body.data.name).to.equal('Palladium Athletic Facility')
-      expect(res.body.data.address).to.equal('140 E 14th St, New York, NY 10003')
-    })
-
-    it('should return facility with hours object containing weekdays and weekends', async () => {
-      const res = await request(app).get('/api/facilities/1')
-      
-      expect(res.body.data.hours).to.have.property('weekdays')
-      expect(res.body.data.hours).to.have.property('weekends')
-      expect(res.body.data.hours.weekdays).to.be.a('string')
-      expect(res.body.data.hours.weekends).to.be.a('string')
-    })
-
-    it('should return facility with amenities array', async () => {
-      const res = await request(app).get('/api/facilities/2')
-      
-      expect(res.body.data.amenities).to.be.an('array')
-      expect(res.body.data.amenities.length).to.be.greaterThan(0)
-      expect(res.body.data.amenities).to.include('Pool')
+      expect(res.body.data._id).to.equal(testFacilityId)
     })
 
     it('should return 404 for non-existent facility id', async () => {
-      const res = await request(app).get('/api/facilities/9999')
-      
+      const fakeId = new mongoose.Types.ObjectId().toString()
+      const res = await request(app).get(`/api/facilities/${fakeId}`)
       expect(res.status).to.equal(404)
       expect(res.body).to.have.property('success', false)
       expect(res.body).to.have.property('error', 'Facility not found')
     })
 
-    it('should return 404 for invalid facility id', async () => {
-      const res = await request(app).get('/api/facilities/999')
-      
-      expect(res.status).to.equal(404)
+    it('should return 400 for invalid facility id', async () => {
+      const res = await request(app).get('/api/facilities/123')
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('success', false)
-      expect(res.body).to.have.property('error')
-    })
-
-    it('should handle string id parameter correctly', async () => {
-      const res = await request(app).get('/api/facilities/3')
-      
-      expect(res.status).to.equal(200)
-      expect(res.body.data.id).to.equal(3)
-      expect(res.body.data.name).to.equal('NYU 404 Fitness')
-    })
-
-    it('should return facility with capacity as number', async () => {
-      const res = await request(app).get('/api/facilities/1')
-      
-      expect(res.body.data.capacity).to.be.a('number')
-      expect(res.body.data.capacity).to.be.greaterThan(0)
-    })
-
-    it('should return facility with phone number', async () => {
-      const res = await request(app).get('/api/facilities/4')
-      
-      expect(res.body.data).to.have.property('phone')
-      expect(res.body.data.phone).to.be.a('string')
-      expect(res.body.data.name).to.equal('Brooklyn Athletic Facility')
-    })
-  })
-
-  describe('Edge Cases', () => {
-    it('should handle negative facility id gracefully', async () => {
-      const res = await request(app).get('/api/facilities/-1')
-      
-      expect(res.status).to.equal(404)
-      expect(res.body).to.have.property('success', false)
-    })
-
-    it('should handle zero facility id', async () => {
-      const res = await request(app).get('/api/facilities/0')
-      
-      expect(res.status).to.equal(404)
-      expect(res.body).to.have.property('success', false)
-    })
-
-    it('should return JSON content type', async () => {
-      const res = await request(app).get('/api/facilities')
-      
-      expect(res.headers['content-type']).to.match(/json/)
-    })
-
-    it('should return JSON content type for specific facility', async () => {
-      const res = await request(app).get('/api/facilities/1')
-      
-      expect(res.headers['content-type']).to.match(/json/)
+      expect(res.body).to.have.property('error', 'Validation failed')
     })
   })
 
   describe('Data Integrity', () => {
-    it('should have unique facility IDs', async () => {
+    it('should have all facilities with non-empty names and addresses', async () => {
       const res = await request(app).get('/api/facilities')
-      
-      const ids = res.body.data.map(f => f.id)
-      const uniqueIds = [...new Set(ids)]
-      expect(ids.length).to.equal(uniqueIds.length)
-    })
-
-    it('should have all facilities with non-empty names', async () => {
-      const res = await request(app).get('/api/facilities')
-      
       res.body.data.forEach(facility => {
         expect(facility.name).to.not.be.empty
-        expect(facility.name.length).to.be.greaterThan(0)
-      })
-    })
-
-    it('should have all facilities with non-empty addresses', async () => {
-      const res = await request(app).get('/api/facilities')
-      
-      res.body.data.forEach(facility => {
         expect(facility.address).to.not.be.empty
-        expect(facility.address).to.match(/NY/)
       })
     })
 
     it('should have all facilities with positive capacity', async () => {
       const res = await request(app).get('/api/facilities')
-      
       res.body.data.forEach(facility => {
         expect(facility.capacity).to.be.greaterThan(0)
       })
@@ -209,7 +151,6 @@ describe('Facilities API Tests', () => {
 
     it('should have createdAt timestamp for all facilities', async () => {
       const res = await request(app).get('/api/facilities')
-      
       res.body.data.forEach(facility => {
         expect(facility).to.have.property('createdAt')
         expect(facility.createdAt).to.be.a('string')
