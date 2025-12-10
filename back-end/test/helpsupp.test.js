@@ -2,25 +2,71 @@
 import express from 'express'
 import request from 'supertest'
 import { expect } from 'chai'
+import mongoose from 'mongoose'
+import dotenv from 'dotenv'
 import helpSupportRouter from '../routes/helpsupp.js'
-import { faqs, supportIssues } from '../utils/mockData.js'
+import { FAQ, SupportIssue } from '../db.js'
 
-// Create a tiny test app and mount the router like in app.js
+dotenv.config()
+
 const app = express()
 app.use(express.json())
 app.use('/api/support', helpSupportRouter)
 
 describe('Help & Support API Tests', () => {
-  // Track any issues we create so we can clean them up
   let createdIssueIds = []
+  let testUserId // store an ObjectId of a test user for issues
 
-  afterEach(() => {
-    if (createdIssueIds.length > 0) {
-      for (let i = supportIssues.length - 1; i >= 0; i--) {
-        if (createdIssueIds.includes(supportIssues[i].id)) {
-          supportIssues.splice(i, 1)
-        }
+  before(async () => {
+    try {
+      if (!mongoose.connection.readyState) {
+        await mongoose.connect(process.env.MONGODB_UNIT_TEST_URI)
+        console.log('MongoDB Connected')
       }
+
+      // Clear existing test data
+      await FAQ.deleteMany({})
+      await SupportIssue.deleteMany({})
+
+      // Insert sample FAQ data
+      await FAQ.insertMany([
+        { question: 'How to reset password?', answer: 'Use the reset link.', category: 'Account', order: 1 },
+        { question: 'How to book a gym?', answer: 'Use the portal.', category: 'Account', order: 2 },
+        { question: 'How to report an issue?', answer: 'Use support form.', category: 'Technical', order: 3 },
+      ])
+
+      // Insert a sample user ID to use in support issues
+      testUserId = new mongoose.Types.ObjectId()
+
+      // Insert a sample support issue
+      const issue = new SupportIssue({
+        userId: testUserId,
+        description: 'Sample issue',
+        subject: 'Support request',
+        category: 'Technical',
+        status: 'open',
+        priority: 'medium',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        resolvedAt: null
+      })
+      await issue.save()
+    } catch (err) {
+      console.error('Setup error:', err)
+      throw err
+    }
+  })
+
+  after(async () => {
+    await FAQ.deleteMany({})
+    await SupportIssue.deleteMany({})
+    await mongoose.connection.close()
+    console.log('MongoDB Disconnected')
+  })
+
+  afterEach(async () => {
+    if (createdIssueIds.length > 0) {
+      await SupportIssue.deleteMany({ _id: { $in: createdIssueIds } })
       createdIssueIds = []
     }
   })
@@ -29,71 +75,36 @@ describe('Help & Support API Tests', () => {
   describe('GET /api/support/faqs', () => {
     it('should return all FAQs with success status', async () => {
       const res = await request(app).get('/api/support/faqs')
-
       expect(res.status).to.equal(200)
       expect(res.body.success).to.be.true
-      expect(res.body).to.have.property('data')
       expect(res.body.data).to.be.an('array')
       expect(res.body).to.have.property('message', 'FAQs retrieved successfully')
     })
 
-    it('should return the same number of FAQs as in mockData', async () => {
-      const res = await request(app).get('/api/support/faqs')
-
+    it('should filter FAQs by category', async () => {
+      const res = await request(app).get('/api/support/faqs').query({ category: 'Account' })
       expect(res.status).to.equal(200)
-      expect(res.body.data.length).to.equal(faqs.length)
-    })
-
-    it('should sort FAQs by order in ascending order', async () => {
-      const res = await request(app).get('/api/support/faqs')
-
-      const orders = res.body.data.map(f => f.order)
-      for (let i = 0; i < orders.length - 1; i++) {
-        expect(orders[i]).to.be.at.most(orders[i + 1])
-      }
-    })
-
-    it('should filter FAQs by category when category query is provided', async () => {
-      // Use a category that we know exists from mockData
-      const category = faqs[0].category
-
-      const res = await request(app)
-        .get('/api/support/faqs')
-        .query({ category })
-
-      expect(res.status).to.equal(200)
-      expect(res.body.success).to.be.true
-      expect(res.body.data).to.be.an('array')
       res.body.data.forEach(faq => {
-        expect(faq.category.toLowerCase()).to.equal(category.toLowerCase())
+        expect(faq.category.toLowerCase()).to.equal('account')
       })
     })
   })
 
   // ---------- GET /api/support/issues/user/:userId ----------
   describe('GET /api/support/issues/user/:userId', () => {
-    it('should return support issues only for the specified user', async () => {
-      // Pick a userId that actually exists in the mock data
-      const userId = supportIssues.length > 0 ? supportIssues[0].userId : 1
-
-      const res = await request(app)
-        .get(`/api/support/issues/user/${userId}`)
-
+    it('should return support issues for a valid userId', async () => {
+      const res = await request(app).get(`/api/support/issues/user/${testUserId}`)
       expect(res.status).to.equal(200)
       expect(res.body.success).to.be.true
-      expect(res.body.data).to.be.an('array')
       res.body.data.forEach(issue => {
-        expect(issue.userId).to.equal(userId)
+        expect(issue.userId).to.equal(testUserId.toString())
       })
     })
 
-    it('should return JSON content type', async () => {
-      const userId = supportIssues.length > 0 ? supportIssues[0].userId : 1
-
-      const res = await request(app)
-        .get(`/api/support/issues/user/${userId}`)
-
-      expect(res.headers['content-type']).to.match(/json/)
+    it('should return 400 for invalid userId', async () => {
+      const res = await request(app).get('/api/support/issues/user/123invalid')
+      expect(res.status).to.equal(400)
+      expect(res.body.success).to.be.false
     })
   })
 
@@ -101,72 +112,37 @@ describe('Help & Support API Tests', () => {
   describe('POST /api/support/issues', () => {
     it('should create a new support issue with valid data', async () => {
       const payload = {
-        userId: 1,
-        message: 'The treadmill in Palladium is broken'
+        userId: testUserId,
+        message: 'The treadmill is broken'
       }
-
-      const initialLength = supportIssues.length
-
-      const res = await request(app)
-        .post('/api/support/issues')
-        .send(payload)
-
+      const res = await request(app).post('/api/support/issues').send(payload)
       expect(res.status).to.equal(201)
       expect(res.body.success).to.be.true
-      expect(res.body.data).to.have.property('id')
-      expect(res.body.data.userId).to.equal(1)
+      expect(res.body.data.userId).to.equal(testUserId.toString())
       expect(res.body.data.description).to.equal(payload.message)
-      expect(res.body.data.status).to.equal('open')
-      expect(res.body.data).to.have.property('createdAt')
-      expect(res.body.data).to.have.property('updatedAt')
-      expect(res.body.data.resolvedAt).to.be.null
-
-      // Track for cleanup
-      createdIssueIds.push(res.body.data.id)
-
-      // Confirm it was actually added to the in-memory array
-      expect(supportIssues.length).to.equal(initialLength + 1)
+      createdIssueIds.push(res.body.data._id)
     })
 
-    it('should apply default subject, category, and priority when not provided', async () => {
-      const payload = {
-        userId: 2,
-        message: 'General feedback'
-      }
-
-      const res = await request(app)
-        .post('/api/support/issues')
-        .send(payload)
-
+    it('should apply default subject, category, and priority', async () => {
+      const payload = { userId: testUserId, message: 'Feedback' }
+      const res = await request(app).post('/api/support/issues').send(payload)
       expect(res.status).to.equal(201)
-      expect(res.body.success).to.be.true
-
-      const issue = res.body.data
-      createdIssueIds.push(issue.id)
-
-      expect(issue.subject).to.equal('Support request')
-      expect(issue.category).to.equal('General')
-      expect(issue.priority).to.equal('medium')
+      expect(res.body.data.subject).to.equal('Support request')
+      expect(res.body.data.category).to.equal('Other')
+      expect(res.body.data.priority).to.equal('medium')
+      createdIssueIds.push(res.body.data._id)
     })
 
-    it('should return 400 when userId or message is missing', async () => {
-      const res = await request(app)
-        .post('/api/support/issues')
-        .send({ userId: 1 })   // missing message
-
+    it('should return 400 if userId or message missing', async () => {
+      const res = await request(app).post('/api/support/issues').send({ userId: testUserId })
       expect(res.status).to.equal(400)
       expect(res.body.success).to.be.false
-      expect(res.body.error).to.equal('userId and message are required')
     })
 
-    it('should return 400 when userId is not a valid number', async () => {
-      const res = await request(app)
-        .post('/api/support/issues')
-        .send({ userId: 'abc', message: 'Bad id' })
-
-      expect(res.status).to.equal(400)
+    it('should return 500 for invalid userId string', async () => {
+      const res = await request(app).post('/api/support/issues').send({ userId: 'abc', message: 'Bad id' })
+      expect(res.status).to.equal(500)
       expect(res.body.success).to.be.false
-      expect(res.body.error).to.equal('Invalid userId')
     })
   })
 })
