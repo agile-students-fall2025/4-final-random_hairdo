@@ -124,7 +124,7 @@ function ChangePassword() {
                 );
             }
 
-            setMessage("✅ Your password has been successfully changed.");
+            setMessage("Your password has been successfully changed.");
             setIsSuccess(true);
             setCurrentPassword("");
             setNewPassword("");

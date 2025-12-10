@@ -72,7 +72,7 @@ function History() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#efefed] px-6 py-4">
+    <div className="min-h-[90vh] w-full flex flex-col bg-[#efefed] px-6 py-4">
       <header className="mx-auto w-full max-w-xl flex items-start justify-between mb-6">
         <Link
           to="/profile"
@@ -105,8 +105,8 @@ function History() {
                 <p className="text-sm text-gray-600">Total Minutes</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-[#462c9f]">{stats.totalCalories || 0}</p>
-                <p className="text-sm text-gray-600">Calories Burned</p>
+                <p className="text-2xl font-bold text-[#462c9f]">{stats.averageMood || 0}</p>
+                <p className="text-sm text-gray-600">Average Mood</p>
               </div>
             </div>
           </div>
@@ -125,7 +125,7 @@ function History() {
           </div>
         ) : (
           /* Workout Cards - Mobile Friendly */
-          <div className="space-y-4">
+          <div className="max-h-[43vh] overflow-y-auto space-y-4">
             {workoutHistory.map((workout) => (
               <div 
                 key={workout._id}
@@ -136,35 +136,40 @@ function History() {
                   <h3 className="text-lg font-semibold text-[#462c9f]">
                     {workout.type}
                   </h3>
-                  <span className="text-sm text-gray-600">
-                    {new Date(workout.date).toLocaleDateString()}
-                  </span>
                 </div>
 
                 {/* Workout Details Grid */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="font-medium text-[#282f3e]">Location:</span>
+                    <span className="font-medium text-[#282f3e]">Gym:</span>
+                    <p className="text-gray-700">{workout.facilityId?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-[#282f3e]">Zone:</span>
                     <p className="text-gray-700">{workout.zoneName}</p>
                   </div>
                   <div>
                     <span className="font-medium text-[#282f3e]">Duration:</span>
                     <p className="text-gray-700">{workout.duration} minutes</p>
                   </div>
+                  <div>
+                    <span className="font-medium text-[#282f3e]">Date:</span>
+                    <p className="text-gray-700">{new Date(workout.date).toLocaleDateString()}</p>
+                  </div>
+                  
+                  {/* Mood (if available) */}
+                  {workout.mood && (
+                    <div className="col-span-2">
+                      <span className="font-medium text-[#282f3e]">Mood:</span>
+                      <p className="text-gray-700">{workout.mood}/10</p>
+                    </div>
+                  )}
                   
                   {/* Exercises (if available) */}
                   {workout.exercises && workout.exercises.length > 0 && (
                     <div className="col-span-2">
                       <span className="font-medium text-[#282f3e]">Exercises:</span>
                       <p className="text-gray-700">{workout.exercises.join(', ')}</p>
-                    </div>
-                  )}
-
-                  {/* Calories (if available) */}
-                  {workout.caloriesBurned > 0 && (
-                    <div className="col-span-2">
-                      <span className="font-medium text-[#282f3e]">Calories Burned:</span>
-                      <p className="text-gray-700">🔥 {workout.caloriesBurned} kcal</p>
                     </div>
                   )}
 

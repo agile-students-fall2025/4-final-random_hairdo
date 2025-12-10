@@ -169,12 +169,15 @@ const queueSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'cancelled'],
+    enum: ['active', 'in_use', 'completed', 'cancelled'],
     default: 'active'
-  },
+  },  
   joinedAt: {
     type: Date,
     default: Date.now
+  },
+  startedAt: {
+    type: Date
   },
   completedAt: {
     type: Date
@@ -182,6 +185,21 @@ const queueSchema = new mongoose.Schema({
 }, {
   timestamps: true
 })
+
+/**
+ * UNIQUE INDEX:
+ * A user can have at most ONE queue entry in a given zone
+ * while it is 'active' or 'in_use'.
+ * (They can still have history entries with 'completed' / 'cancelled'.)
+ */
+queueSchema.index(
+  { userId: 1, zoneId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ['active', 'in_use'] } }
+  }
+)
+
 
 // Goal Schema - Simplified to match Sprint 2 & current frontend
 const goalSchema = new mongoose.Schema({
@@ -244,8 +262,10 @@ const historySchema = new mongoose.Schema({
   notes: {
     type: String
   },
-  caloriesBurned: {
-    type: Number
+  mood: {
+    type: Number,
+    min: 1,
+    max: 10
   }
 }, {
   timestamps: true

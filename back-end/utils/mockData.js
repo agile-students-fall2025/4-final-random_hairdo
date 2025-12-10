@@ -92,8 +92,8 @@ export const zones = [
     equipment: ['Treadmills', 'Ellipticals', 'Bikes'],
     capacity: 30,
     currentOccupancy: 22,
-    queueLength: 5,
-    averageWaitTime: 15,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'busy',
     createdAt: '2023-01-01T00:00:00Z'
   },
@@ -104,8 +104,8 @@ export const zones = [
     equipment: ['Dumbbells', 'Barbells', 'Bench Press'],
     capacity: 25,
     currentOccupancy: 18,
-    queueLength: 3,
-    averageWaitTime: 20,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'moderate',
     createdAt: '2023-01-01T00:00:00Z'
   },
@@ -128,8 +128,8 @@ export const zones = [
     equipment: ['Treadmills', 'Stair Masters', 'Rowing Machines'],
     capacity: 25,
     currentOccupancy: 20,
-    queueLength: 4,
-    averageWaitTime: 12,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'busy',
     createdAt: '2023-02-01T00:00:00Z'
   },
@@ -140,8 +140,8 @@ export const zones = [
     equipment: ['Cable Machines', 'Smith Machine', 'Leg Press'],
     capacity: 20,
     currentOccupancy: 10,
-    queueLength: 1,
-    averageWaitTime: 10,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'available',
     createdAt: '2023-02-01T00:00:00Z'
   },
@@ -152,8 +152,8 @@ export const zones = [
     equipment: ['Pull-up Bars', 'Olympic Platforms', 'Plyometric Boxes'],
     capacity: 15,
     currentOccupancy: 14,
-    queueLength: 6,
-    averageWaitTime: 25,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'busy',
     createdAt: '2023-03-01T00:00:00Z'
   },
@@ -164,8 +164,8 @@ export const zones = [
     equipment: ['Treadmills', 'Ellipticals', 'Spin Bikes'],
     capacity: 25,
     currentOccupancy: 15,
-    queueLength: 2,
-    averageWaitTime: 8,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'available',
     createdAt: '2023-04-01T00:00:00Z'
   },
@@ -188,8 +188,8 @@ export const zones = [
     equipment: ['Weight Machines', 'Free Weights', 'Dumbbells'],
     capacity: 30,
     currentOccupancy: 25,
-    queueLength: 4,
-    averageWaitTime: 15,
+    queueLength: 0,
+    averageWaitTime: 0,
     status: 'busy',
     createdAt: '2023-04-01T00:00:00Z'
   }
