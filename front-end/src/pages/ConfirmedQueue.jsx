@@ -17,6 +17,17 @@ const formatWaitTime = (minutes) => {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
+const formatTimer = (seconds) => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 function ConfirmedQueue() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +55,13 @@ function ConfirmedQueue() {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showEndWorkoutModal, setShowEndWorkoutModal] = useState(false);
+  const [workoutMood, setWorkoutMood] = useState("");
+  const [workoutNotes, setWorkoutNotes] = useState("");
+  
+  // Workout timer
+  const [workoutStartTime, setWorkoutStartTime] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const showToast = (message, type = "info") => {
     setToast({ message, type });
@@ -74,6 +92,18 @@ function ConfirmedQueue() {
       navigate("/facility");
     }
   }, [queueId, userFromToken, navigate]);
+
+  // Timer effect - runs when workout is active
+  useEffect(() => {
+    if (queueStatus === "in_use" && workoutStartTime) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
+        setElapsedSeconds(elapsed);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [queueStatus, workoutStartTime]);
 
   // SOCKET + INITIAL FETCH
   useEffect(() => {
@@ -122,9 +152,16 @@ function ConfirmedQueue() {
           const q = data.data;
           setQueueStatus(q.status);
 
-          if (q.status === "in_use") {
+          if (q.status === 'in_use') {
             setCurrentPosition(1);
             setEstimatedWait(0);
+            // Restore timer if workout is in progress
+            if (q.startedAt) {
+              const startTime = new Date(q.startedAt).getTime();
+              setWorkoutStartTime(startTime);
+              const elapsed = Math.floor((Date.now() - startTime) / 1000);
+              setElapsedSeconds(elapsed);
+            }
           } else {
             setCurrentPosition(q.position);
             setEstimatedWait(q.estimatedWait);
@@ -197,6 +234,8 @@ function ConfirmedQueue() {
       setQueueStatus("in_use");
       setCurrentPosition(1);
       setEstimatedWait(0);
+      setWorkoutStartTime(Date.now());
+      setElapsedSeconds(0);
     } catch (err) {
       console.error("Start workout failed:", err);
       showToast("Failed to start workout.", "error");
@@ -204,13 +243,31 @@ function ConfirmedQueue() {
   };
 
   // END WORKOUT
-  const handleEndWorkout = async () => {
+  const handleEndWorkout = () => {
+    setShowEndWorkoutModal(true);
+  };
+
+  const confirmEndWorkout = async () => {
     try {
       const token = localStorage.getItem("token");
 
+      // Validate mood
+      const moodNum = parseInt(workoutMood);
+      if (!workoutMood || isNaN(moodNum) || moodNum < 1 || moodNum > 10) {
+        showToast("Please enter a mood rating between 1-10", "warning");
+        return;
+      }
+
       const res = await fetch(`/api/queues/${queueId}/stop`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mood: moodNum,
+          notes: workoutNotes.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -220,8 +277,9 @@ function ConfirmedQueue() {
         return;
       }
 
+      setShowEndWorkoutModal(false);
       showToast("Workout completed!", "success");
-      setTimeout(() => navigate("/facility"), 900);
+      setTimeout(() => navigate("/history"), 900);
     } catch (err) {
       console.error("End workout failed:", err);
       showToast("Failed to end workout.", "error");
@@ -271,6 +329,62 @@ function ConfirmedQueue() {
         </div>
       )}
 
+      {/* End Workout Modal */}
+      {showEndWorkoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full">
+            <h3 className="text-xl font-bold mb-4">Complete Workout</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                How was your workout mood? (1-10)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={workoutMood}
+                onChange={(e) => setWorkoutMood(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#462c9f]"
+                placeholder="Rate 1-10"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Workout Notes (Optional)
+              </label>
+              <textarea
+                value={workoutNotes}
+                onChange={(e) => setWorkoutNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#462c9f] resize-none"
+                rows="3"
+                placeholder="Add any notes about your workout..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEndWorkoutModal(false);
+                  setWorkoutMood("");
+                  setWorkoutNotes("");
+                }}
+                className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEndWorkout}
+                className="flex-1 px-4 py-2 rounded-lg bg-[#462c9f] text-white font-semibold hover:bg-[#3b237f]"
+              >
+                Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="w-full flex items-start justify-between mb-8">
         <Link
@@ -307,6 +421,16 @@ function ConfirmedQueue() {
                 <p className="text-sm text-green-600 font-semibold mt-2">
                   You're currently using the zone.
                 </p>
+                
+                {/* Timer Display */}
+                {workoutStartTime && (
+                  <div className="mt-4 p-4 bg-[#462c9f] rounded-lg">
+                    <p className="text-sm text-white mb-1 text-center">Workout Time</p>
+                    <p className="text-5xl font-bold text-white text-center font-mono">
+                      {formatTimer(elapsedSeconds)}
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <>

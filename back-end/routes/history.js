@@ -76,14 +76,20 @@ router.get('/user/:userId',
       
       // Find workouts and sort by date (newest first)
       const workouts = await History.find(query)
+        .populate('facilityId', 'name')
         .sort({ date: -1 })  // -1 for descending (newest first)
         .lean()  // Convert to plain JavaScript objects for better performance
       
       // Calculate summary statistics - Sprint 2 logic preserved
+      const workoutsWithMood = workouts.filter(w => w.mood != null && w.mood > 0)
+      const averageMood = workoutsWithMood.length > 0
+        ? (workoutsWithMood.reduce((sum, w) => sum + w.mood, 0) / workoutsWithMood.length).toFixed(1)
+        : 0
+      
       const stats = {
         totalWorkouts: workouts.length,
         totalMinutes: workouts.reduce((sum, w) => sum + (w.duration || 0), 0),
-        totalCalories: workouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
+        averageMood: parseFloat(averageMood),
         mostFrequentGym: getMostFrequentGym(workouts),
         mostFrequentExercise: getMostFrequentExercise(workouts),
         workoutTypeBreakdown: getWorkoutTypeBreakdown(workouts)

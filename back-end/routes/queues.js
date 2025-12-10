@@ -1,6 +1,6 @@
 import express from 'express'
 import { body, param, validationResult } from 'express-validator'
-import { Queue, Notification, Zone } from '../db.js'
+import { Queue, Notification, Zone, History } from '../db.js'
 import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -436,6 +436,7 @@ router.post('/:id/start', [
     queue.status = 'in_use'
     queue.position = 0
     queue.estimatedWait = 0
+    queue.startedAt = new Date()
     await queue.save()
 
     // shift others up, send notifications – unchanged from your version
@@ -575,6 +576,33 @@ router.post('/:id/stop', [
     queue.status = 'completed'
     queue.completedAt = new Date()
     await queue.save()
+
+    // Create history log
+    try {
+      const startTime = queue.startedAt || queue.joinedAt
+      const workoutDurationMs = queue.completedAt - startTime
+      const workoutDurationMinutes = Math.round(workoutDurationMs / (1000 * 60))
+
+      const { mood, notes } = req.body
+
+      const historyEntry = new History({
+        userId: queue.userId,
+        facilityId: facilityId,
+        zoneId: zoneId,
+        zoneName: zone.name,
+        date: queue.completedAt,
+        duration: workoutDurationMinutes > 0 ? workoutDurationMinutes : 1,
+        type: 'Workout',
+        exercises: [],
+        notes: notes || '',
+        mood: mood || null
+      })
+      await historyEntry.save()
+      console.log('History log created:', historyEntry._id)
+    } catch (historyError) {
+      console.error('Error creating history log:', historyError)
+      // Don't fail the stop request if history creation fails
+    }
 
     const io = req.app.get('io')
     if (io) {
