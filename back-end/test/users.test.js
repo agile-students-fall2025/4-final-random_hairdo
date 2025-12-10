@@ -22,7 +22,7 @@ describe('Users API Tests - Sprint 3', () => {
     this.timeout(10000)
     
     // Use TEST database (not production!)
-    const testDbUri = process.env.MONGODB_TEST_URI
+    const testDbUri = process.env.MONGODB_UNIT_TEST_URI
     
     // Close existing connection if any
     if (mongoose.connection.readyState !== 0) {
