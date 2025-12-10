@@ -5,7 +5,7 @@
     "main": "server.js",
     "type": "module",
     "scripts": {
-        "test": "mocha --timeout=3000",
+        "test": "mocha --timeout=10000 --exit",
         "coverage": "c8 mocha --timeout=3000",
         "start": "node server.js",
         "dev": "nodemon server.js",

@@ -206,7 +206,7 @@ router.post('/',
     body('duration').isInt({ min: 1 }).withMessage('Duration must be a positive integer'),
     body('type').trim().notEmpty().withMessage('Type is required'),
     body('exercises').optional().isArray().withMessage('Exercises must be an array'),
-    body('caloriesBurned').optional().isInt({ min: 0 }).withMessage('Calories must be non-negative'),
+    body('mood').optional().isInt({ min: 1, max: 10 }).withMessage('Mood must be between 1 and 10'),
     body('notes').optional().trim()
   ],
   async (req, res) => {
@@ -229,8 +229,8 @@ router.post('/',
         zoneName,
         duration, 
         type, 
-        exercises,     
-        caloriesBurned, 
+        exercises,
+        mood,
         notes 
       } = req.body
       
@@ -253,7 +253,7 @@ router.post('/',
         duration,
         type,
         exercises: exercises || [],  // Sprint 2 feature: exercises array
-        caloriesBurned: caloriesBurned || 0,
+        mood: mood || null,  // Optional mood rating (1-10)
         notes: notes || ''
       })
       
