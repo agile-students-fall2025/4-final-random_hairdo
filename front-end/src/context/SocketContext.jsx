@@ -17,22 +17,10 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         // Connect to WebSocket server
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        
-        // For DigitalOcean deployment with subpath, we need to configure the path correctly
-        const socketConfig = {
-            transports: ["polling", "websocket"], // Try polling first for DigitalOcean
+        const socketInstance = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+            transports: ["websocket", "polling"],
             autoConnect: true,
-        };
-        
-        // If using a subpath like /final-random-hairdo-back-end, include it in the path
-        if (apiUrl.includes('/final-random-hairdo-back-end')) {
-            socketConfig.path = '/final-random-hairdo-back-end/socket.io';
-        } else {
-            socketConfig.path = '/socket.io';
-        }
-        
-        const socketInstance = io(apiUrl.replace('/final-random-hairdo-back-end', ''), socketConfig);
+        });
 
         socketInstance.on("connect", () => {
             //console.log("WebSocket connected:", socketInstance.id);
