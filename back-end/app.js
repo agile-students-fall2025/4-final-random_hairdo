@@ -35,7 +35,12 @@ const __dirname = path.dirname(__filename)
 const app = express()
 
 // 1. CORS - Allow frontend to make requests
-app.use(cors())
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? [/^https:\/\/.*\.ondigitalocean\.app$/]
+    : /^http:\/\/localhost(:\d+)?$/,
+  credentials: true
+}))
 
 // 2. Morgan - Log HTTP requests (dev mode)
 app.use(morgan('dev'))

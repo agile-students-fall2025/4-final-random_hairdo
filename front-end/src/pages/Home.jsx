@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import Toast from '../components/Toast'
+import getApiUrl from '../utils/api'
 
 const formatWaitTime = (minutes) => {
   if (minutes === 0) return 'Next in line!'
@@ -89,11 +90,11 @@ function Home() {
         const userId = userFromToken.id
 
         // Fetch in_use and active queues separately
-        const [inUseRes, activeRes, historyRes] = await Promise.all([
-          fetch(`/api/queues/user/${userId}?status=in_use`, {
+        const [inUseRes, activeRes] = await Promise.all([
+          fetch(getApiUrl(`/api/queues/user/${userId}?status=in_use`), {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          fetch(`/api/queues/user/${userId}?status=active`, {
+          fetch(getApiUrl(`/api/queues/user/${userId}?status=active`), {
             headers: { Authorization: `Bearer ${token}` }
           }),
           fetch(`/api/history/user/${userId}`, {

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useSocket } from "../context/SocketContext";
 import Toast from "../components/Toast";
+import getApiUrl from "../utils/api";
 
 // Shared button styles
 const btnPrimary =
@@ -88,7 +89,7 @@ function Zone() {
             try {
                 setLoading(true);
                 const response = await fetch(
-                    `/api/zones?facilityId=${facilityId}`
+                    getApiUrl(`/api/zones?facilityId=${facilityId}`)
                 );
                 const data = await response.json();
 
@@ -123,7 +124,7 @@ function Zone() {
             // Refetch zones data to get updated queue lengths
             try {
                 const response = await fetch(
-                    `/api/zones?facilityId=${facilityId}`
+                    getApiUrl(`/api/zones?facilityId=${facilityId}`)
                 );
                 const zonesData = await response.json();
 
@@ -166,7 +167,7 @@ function Zone() {
             }
 
             // Create queue entry in backend
-            const response = await fetch("/api/queues", {
+            const response = await fetch(getApiUrl("/api/queues"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import getApiUrl from "../utils/api";
 
 // Shared styles
 const btnPrimary =
@@ -54,7 +55,7 @@ export default function Support() {
   async function api(path, opts = {}) {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(path, {
+    const res = await fetch(getApiUrl(path), {
       method: opts.method || "GET",
       headers: {
         ...(opts.body ? { "Content-Type": "application/json" } : {}),

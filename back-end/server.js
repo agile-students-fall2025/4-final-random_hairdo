@@ -11,7 +11,9 @@ const server = createServer(app)
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: /^http:\/\/localhost(:\d+)?$/,
+    origin: process.env.NODE_ENV === 'production' 
+      ? [/^https:\/\/.*\.ondigitalocean\.app$/]
+      : /^http:\/\/localhost(:\d+)?$/,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }

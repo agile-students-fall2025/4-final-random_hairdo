@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Toast from '../components/Toast'
+import getApiUrl from '../utils/api'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -20,7 +21,7 @@ function Login() {
       setLoading(true)
 
       // Using relative URL
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })

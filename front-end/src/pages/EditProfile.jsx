@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
+import getApiUrl from '../utils/api'
 
 function EditProfile() {
   const navigate = useNavigate()
@@ -35,7 +36,7 @@ function EditProfile() {
     if (!userId) return
 
     // Using relative URL
-    fetch(`/api/users/${userId}`, {
+    fetch(getApiUrl(`/api/users/${userId}`), {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -114,7 +115,7 @@ function EditProfile() {
     
     try {
       // Using relative URL 
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/users/${userId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

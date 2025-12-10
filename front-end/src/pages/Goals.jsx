@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import getApiUrl from "../utils/api";
 
 
 const btnPrimary =
@@ -37,7 +38,7 @@ function Goals() {
       if (!authToken) return;
 
       try {
-        const res = await fetch("/api/goals", { // relative URL
+        const res = await fetch(getApiUrl("/api/goals"), { // relative URL
           headers: { Authorization: `Bearer ${authToken}` },
         });
 
@@ -68,7 +69,7 @@ function Goals() {
     if (!trimmed || !authToken) return;
 
     try {
-      const res = await fetch("/api/goals", {
+      const res = await fetch(getApiUrl("/api/goals"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -97,7 +98,7 @@ function Goals() {
   const removeGoal = async (id) => {
     if (!authToken) return;
     try {
-      const res = await fetch(`/api/goals/${id}`, {
+      const res = await fetch(getApiUrl(`/api/goals/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -120,7 +121,7 @@ function Goals() {
   const completeGoal = async (goal) => {
     if (!authToken) return;
     try {
-      const res = await fetch(`/api/goals/${goal._id}`, {
+      const res = await fetch(getApiUrl(`/api/goals/${goal._id}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -147,7 +148,7 @@ function Goals() {
   const clearAllGoals = async () => {
     if (!authToken) return;
     try {
-      const res = await fetch("/api/goals", {
+      const res = await fetch(getApiUrl("/api/goals"), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` },
       });
