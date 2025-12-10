@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
+import getApiUrl from "../utils/api";
 
 const btnPrimary =
   "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition";
@@ -72,7 +73,7 @@ export default function Settings() {
 
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/settings/account/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/settings/account/${userId}`), {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

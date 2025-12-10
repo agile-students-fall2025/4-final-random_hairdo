@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import getApiUrl from '../utils/api'
 
 const btnPrimary = "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition hover:cursor-pointer"
 
@@ -24,7 +25,7 @@ function Facility() {
     const fetchFacilities = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/facilities')
+        const response = await fetch(getApiUrl('/api/facilities'))
         const data = await response.json()
         
         if (data.success) {

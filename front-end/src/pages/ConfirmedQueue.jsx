@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useSocket } from "../context/SocketContext";
 import Toast from "../components/Toast";
+import getApiUrl from "../utils/api";
 
 const btnPrimary =
   "w-1/2 px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition hover:cursor-pointer";
@@ -130,7 +131,7 @@ function ConfirmedQueue() {
     const fetchQueueStatus = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`/api/queues/${queueId}`, {
+        const res = await fetch(getApiUrl(`/api/queues/${queueId}`), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -187,7 +188,7 @@ function ConfirmedQueue() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/queues/${queueId}`, {
+      const response = await fetch(getApiUrl(`/api/queues/${queueId}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -218,7 +219,7 @@ function ConfirmedQueue() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/queues/${queueId}/start`, {
+      const res = await fetch(getApiUrl(`/api/queues/${queueId}/start`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -258,7 +259,7 @@ function ConfirmedQueue() {
         return;
       }
 
-      const res = await fetch(`/api/queues/${queueId}/stop`, {
+      const res = await fetch(getApiUrl(`/api/queues/${queueId}/stop`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

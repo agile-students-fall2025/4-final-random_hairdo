@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import getApiUrl from "../utils/api";
 
 // Shared button styles
 const btnPrimary =
@@ -44,7 +45,7 @@ function Profile() {
 
         const token = localStorage.getItem("token");
         // Using relative URL
-        fetch(`/api/users/${userFromToken.id}`, {
+        fetch(getApiUrl(`/api/users/${userFromToken.id}`), {
             headers: {
                 Authorization: `Bearer ${token}`,
             },

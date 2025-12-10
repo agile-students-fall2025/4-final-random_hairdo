@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import getApiUrl from "../utils/api";
 
 // API helper function - defined outside component to avoid recreation
 const api = async (path, opts = {}) => {
@@ -10,7 +11,7 @@ const api = async (path, opts = {}) => {
     ...(token ? { "Authorization": `Bearer ${token}` } : {})
   }
   
-  const res = await fetch(path, {
+  const res = await fetch(getApiUrl(path), {
     method: opts.method || "GET",
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,

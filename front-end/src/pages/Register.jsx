@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
+import getApiUrl from "../utils/api";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -51,7 +52,7 @@ function Register() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(getApiUrl("/api/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

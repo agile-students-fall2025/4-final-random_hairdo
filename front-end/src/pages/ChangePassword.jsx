@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import getApiUrl from "../utils/api";
 
 const btnPrimary =
     "w-full px-5 py-3 rounded-lg bg-[#462c9f] text-white text-base font-semibold text-center hover:bg-[#3b237f] transition cursor-pointer";
@@ -77,7 +78,7 @@ function ChangePassword() {
             }
 
             // Send request with Authorization header and currentPassword
-            const res = await fetch(`/api/users/${userFromToken.id}/password`, {
+            const res = await fetch(getApiUrl(`/api/users/${userFromToken.id}/password`), {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
